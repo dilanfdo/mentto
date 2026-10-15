@@ -1,3 +1,16 @@
+## Mentto
+
+Mentto is an offline-first planner for independent tutors (students, fee plans, recurring slots,
+attendance, payments, reminders). v1 is Android-first and tutor-only; there is no server.
+
+- All data lives in SQLite. The schema and migrations are in `src/db/schema.ts`: append a new
+  migration for any schema change and never edit one that has shipped.
+- Store money as integer minor units (cents) with a currency code. Never use floats for amounts.
+- Recurring slots are an RRULE plus `schedule_exceptions` overrides, not one row per future session.
+- Every write should bump the change counter in `meta` so the auto-backup knows there is something to upload.
+- Local notifications: iOS allows only 64 pending, so schedule a rolling window (about 14 days) and top it up.
+- App ID is `app.nexusdigitallabs.mentto`. Never use a personal name or account for package IDs or ownership.
+
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
 ## Expo has changed — do not trust your training data
