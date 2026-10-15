@@ -13,12 +13,16 @@
     "android": {
       "package": "app.nexusdigitallabs.mentto",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#4F46E5",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ],
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -26,11 +30,42 @@
     "plugins": [
       "expo-router",
       "expo-sqlite",
-      "expo-notifications"
+      "expo-localization",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/PlusJakartaSans_400Regular.ttf",
+            "./assets/fonts/PlusJakartaSans_500Medium.ttf",
+            "./assets/fonts/PlusJakartaSans_600SemiBold.ttf",
+            "./assets/fonts/PlusJakartaSans_700Bold.ttf"
+          ]
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#4F46E5"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F6F6FA",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 120,
+          "dark": {
+            "backgroundColor": "#0E0E15",
+            "image": "./assets/splash-icon.png"
+          }
+        }
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "scheme": "mentto",
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "backgroundColor": "#F6F6FA"
   }
 }

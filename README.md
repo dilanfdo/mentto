@@ -10,6 +10,7 @@ due dates. The first version is for the tutor only; a student-facing side comes 
 - `expo-sqlite` for all app data, stored on the device (`src/db/schema.ts`)
 - `expo-notifications` for local reminders
 - Backup: automatic upload to the tutor's Google Drive `appDataFolder` (planned), with Android Auto Backup as a fallback
+- Plus Jakarta Sans (SIL Open Font License), bundled in `assets/fonts`
 
 ## Develop
 
@@ -17,6 +18,7 @@ due dates. The first version is for the tutor only; a student-facing side comes 
 npm install
 npm run android   # builds and runs a development build on a device or emulator
 npm run typecheck
+npm run lint
 ```
 
 Native modules (SQLite, notifications, Google Sign-In later) need a development build, not Expo Go.

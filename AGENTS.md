@@ -11,6 +11,29 @@ attendance, payments, reminders). v1 is Android-first and tutor-only; there is n
 - Local notifications: iOS allows only 64 pending, so schedule a rolling window (about 14 days) and top it up.
 - App ID is `app.nexusdigitallabs.mentto`. Never use a personal name or account for package IDs or ownership.
 
+### Layout
+
+- `src/app/` routes: `(tabs)/` Today, Students, Schedule, Fees; `student/[id]/` page plus edit, slot, plan
+  and payment forms; `onboarding`, `settings`.
+- `src/db/` data access (one file per area, plus `core.ts` with `write()` and `useQuery()`).
+  `useQuery` re-runs automatically after any `write()`; always write through `write()`.
+- `src/domain/` derived data: `lessons.ts` expands slots + exceptions + attendance into lessons,
+  `fees.ts` turns plans, attendance and payments into balances (payments settle the oldest charge first).
+- `src/notifications/` local reminders (rolling window, rescheduled on any data change).
+- `modules/exact-alarms/` local Expo module: checks/opens Android's "Alarms & reminders" access, without
+  which reminders can arrive up to an hour late.
+
+### Design system
+
+- Tokens live in `src/theme/tokens.ts` (colors for light and dark, Plus Jakarta Sans type scale, 8-pt
+  spacing, radii, motion). Read them via `useTheme()`; never hard-code colors or font sizes in screens.
+- Build screens from `src/components/ui` (`Screen`, `Card`, `ListRow`, `Button`, `TextField`, `Sheet`,
+  `Badge`, `Chip`, `EmptyState`, `useSnackbar`...). Screens with a primary action put it in `Screen`'s
+  `footer` (forms) or a `Fab` (lists).
+- Status is never shown by color alone: badges carry an icon or words.
+- Forms that edit loaded data split into a loader component and a body that seeds `useState` from props
+  (no copying data into state inside effects; the React Compiler lint rules reject that).
+
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
 ## Expo has changed — do not trust your training data

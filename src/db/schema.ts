@@ -97,7 +97,10 @@ const MIGRATIONS: string[] = [
 ];
 
 export async function migrateDatabase(db: SQLiteDatabase): Promise<void> {
-  await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+  // Wait for a lock rather than fail, e.g. while a previous connection is closing on reload.
+  await db.execAsync('PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;');
+  const mode = await db.getFirstAsync<{ journal_mode: string }>('PRAGMA journal_mode');
+  if (mode?.journal_mode !== 'wal') await db.execAsync('PRAGMA journal_mode = WAL');
 
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   let version = row?.user_version ?? 0;
