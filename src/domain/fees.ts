@@ -13,7 +13,7 @@ export type FeeStatus = {
   balance: number;
   /** Oldest charge not yet covered by payments, if any. */
   unpaidSince: ISODate | null;
-  /** The next charge after today on a monthly plan. */
+  /** The next charge after today on a monthly or per-term plan. */
   nextDue: Charge | null;
   totalPaid: number;
 };
@@ -23,9 +23,10 @@ export function chargesFor(plans: FeePlan[], attended: Session[], upTo: ISODate)
   const charges: Charge[] = [];
   for (const plan of plans) {
     const end = plan.endsOn && plan.endsOn < upTo ? plan.endsOn : upTo;
-    if (plan.kind === 'monthly') {
+    if (isPeriodic(plan)) {
       const day = plan.dueDay ?? 1;
-      for (let d = plan.startsOn, i = 0; d <= end; i += 1, d = addMonths(plan.startsOn, i, day)) {
+      const step = periodMonths(plan);
+      for (let d = plan.startsOn, i = 0; d <= end; i += 1, d = addMonths(plan.startsOn, i * step, day)) {
         charges.push({ date: d, amount: plan.amount });
       }
     } else {
@@ -38,10 +39,22 @@ export function chargesFor(plans: FeePlan[], attended: Session[], upTo: ISODate)
   return charges.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-export function nextMonthlyCharge(plan: FeePlan | null, after: ISODate): Charge | null {
-  if (!plan || plan.kind !== 'monthly') return null;
+/** Monthly and per-term plans charge on a calendar schedule; per-lesson plans charge on attendance. */
+export function isPeriodic(plan: FeePlan): boolean {
+  return plan.kind === 'monthly' || plan.kind === 'term';
+}
+
+/** Months between charges: 1 for monthly, the term length for per-term plans. */
+export function periodMonths(plan: FeePlan): number {
+  return plan.kind === 'monthly' ? 1 : Math.max(1, plan.periodMonths ?? 3);
+}
+
+/** The first periodic charge after `after`, or null for per-lesson plans and ended plans. */
+export function nextPeriodicCharge(plan: FeePlan | null, after: ISODate): Charge | null {
+  if (!plan || !isPeriodic(plan)) return null;
   const day = plan.dueDay ?? 1;
-  for (let i = 0, d = plan.startsOn; i < 600; i += 1, d = addMonths(plan.startsOn, i, day)) {
+  const step = periodMonths(plan);
+  for (let i = 0, d = plan.startsOn; i < 600; i += 1, d = addMonths(plan.startsOn, i * step, day)) {
     if (plan.endsOn && d > plan.endsOn) return null;
     if (d > after) return { date: d, amount: plan.amount };
   }
@@ -79,7 +92,7 @@ export function computeFeeStatus(
     currency: plan?.currency ?? plans.at(-1)?.currency ?? fallbackCurrency,
     balance: charged - totalPaid,
     unpaidSince,
-    nextDue: nextMonthlyCharge(plan, on),
+    nextDue: nextPeriodicCharge(plan, on),
     totalPaid,
   };
 }

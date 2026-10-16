@@ -74,9 +74,7 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate, hi
         mode: 'date',
         minimumDate: minimumDate ? toDate(minimumDate) : undefined,
         maximumDate: maximumDate ? toDate(maximumDate) : undefined,
-        onChange: (event, date) => {
-          if (event.type === 'set' && date) onChange(toISODate(date));
-        },
+        onValueChange: (_event, date) => onChange(toISODate(date)),
       });
     } else {
       setIosOpen((o) => !o);
@@ -94,7 +92,7 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate, hi
           value={toDate(value)}
           mode="date"
           display="inline"
-          onChange={(_, date) => date && onChange(toISODate(date))}
+          onValueChange={(_, date) => onChange(toISODate(date))}
         />
       )}
     </>
@@ -116,9 +114,7 @@ export function TimeField({ label, value, onChange, hint }: TimeProps) {
         value: toDate(today(), value),
         mode: 'time',
         minuteInterval: 5,
-        onChange: (event, date) => {
-          if (event.type === 'set' && date) onChange(toISOTime(date));
-        },
+        onValueChange: (_event, date) => onChange(toISOTime(date)),
       });
     } else {
       setIosOpen((o) => !o);
@@ -133,7 +129,7 @@ export function TimeField({ label, value, onChange, hint }: TimeProps) {
           mode="time"
           display="spinner"
           minuteInterval={5}
-          onChange={(_, date) => date && onChange(toISOTime(date))}
+          onValueChange={(_, date) => onChange(toISOTime(date))}
         />
       )}
     </>

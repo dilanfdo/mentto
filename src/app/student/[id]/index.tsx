@@ -6,6 +6,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { LessonRow } from '@/components/LessonRow';
 import { LessonSheet } from '@/components/LessonSheet';
+import { SlotList } from '@/components/SlotList';
 import {
   Avatar,
   Badge,
@@ -25,7 +26,8 @@ import {
 } from '@/components/ui';
 import { useQuery, type DB } from '@/db/core';
 import { deletePayment, listPayments } from '@/db/fees';
-import { listStudentSchedules } from '@/db/schedules';
+import { listStudentGroups } from '@/db/groups';
+import { listOwnerSchedules } from '@/db/schedules';
 import { getSettings } from '@/db/settings';
 import { getStudent } from '@/db/students';
 import { loadFeeStatus } from '@/domain/fees';
@@ -33,14 +35,14 @@ import { loadLessons, loadNextLesson, type Lesson } from '@/domain/lessons';
 import { callPhone, sendEmail, sendSms, shareText } from '@/lib/contact';
 import {
   addDays,
-  formatDuration,
   formatRelativeDay,
+  formatRelativeDayInline,
   formatShortDate,
   formatTime,
   today,
 } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
-import { describePlan, describeSlot, METHOD_LABELS } from '@/lib/summaries';
+import { describePlan, METHOD_LABELS, summarizeSlots } from '@/lib/summaries';
 import { radii, spacing, useTheme } from '@/theme';
 
 async function loadStudentPage(db: DB, id: string) {
@@ -48,19 +50,22 @@ async function loadStudentPage(db: DB, id: string) {
   if (!student) return null;
   const settings = await getSettings(db);
   const t = today();
-  const [slots, fee, payments, recent, next] = await Promise.all([
-    listStudentSchedules(db, id),
+  const [slots, fee, payments, recent, next, groups] = await Promise.all([
+    listOwnerSchedules(db, { studentId: id }),
     loadFeeStatus(db, id, settings.currency),
     listPayments(db, id, 10),
-    loadLessons(db, addDays(t, -60), t, id),
-    student.status === 'active' ? loadNextLesson(db, id) : Promise.resolve(null),
+    loadLessons(db, addDays(t, -60), t, { studentId: id }),
+    student.status === 'active' ? loadNextLesson(db, { studentId: id }) : Promise.resolve(null),
+    listStudentGroups(db, id),
   ]);
+  const groupSlots = await Promise.all(groups.map((g) => listOwnerSchedules(db, { groupId: g.id })));
   const month = t.slice(0, 7);
   const thisMonth = recent.filter((l) => l.date.startsWith(month));
   return {
     student,
     settings,
     slots,
+    groups: groups.map((g, i) => ({ ...g, slots: summarizeSlots(groupSlots[i]) })),
     fee,
     payments,
     next,
@@ -199,7 +204,8 @@ export default function StudentPage() {
               <Badge label="Archived" icon="archive-outline" />
             ) : data.next ? (
               <Text variant="label" color="textSecondary" align="center">
-                Next lesson {formatRelativeDay(data.next.date)} at {formatTime(data.next.startTime)}
+                Next lesson {formatRelativeDayInline(data.next.date)} at {formatTime(data.next.startTime)}
+                {data.next.groupId ? ` · ${data.next.title}` : ''}
               </Text>
             ) : null}
           </View>
@@ -231,7 +237,7 @@ export default function StudentPage() {
               <View style={styles.cardStack}>
                 <Text variant="bodyStrong">No fee plan yet</Text>
                 <Text variant="label" color="textSecondary">
-                  Charge monthly or per lesson attended. Mentto works out what’s owed.
+                  Charge monthly, per term or per lesson attended. Mentto works out what’s owed.
                 </Text>
                 <Button
                   label="Set up fees"
@@ -293,56 +299,24 @@ export default function StudentPage() {
           )}
         </Section>
 
-        {!archived && (
-          <Section
-            title="Weekly lessons"
-            action={
-              data.slots.length > 0
-                ? { label: 'Add slot', onPress: () => router.push({ pathname: '/student/[id]/slot', params: { id } }) }
-                : undefined
-            }
-          >
-            {data.slots.length === 0 ? (
-              <Card>
-                <View style={styles.cardStack}>
-                  <Text variant="bodyStrong">No weekly slot</Text>
-                  <Text variant="label" color="textSecondary">
-                    Pick the days and time {firstName} comes each week.
-                  </Text>
-                  <Button
-                    label="Add time slot"
-                    icon="calendar-plus"
-                    variant="secondary"
-                    size="small"
-                    style={styles.alignStart}
-                    onPress={() => router.push({ pathname: '/student/[id]/slot', params: { id } })}
+        {!archived && <SlotList owner={{ studentId: id }} name={firstName} slots={data.slots} />}
+
+        {data.groups.length > 0 && (
+          <Section title="Groups">
+            <Card padded={false}>
+              {data.groups.map((g, i) => (
+                <View key={g.id}>
+                  {i > 0 && <Divider inset={68} />}
+                  <ListRow
+                    leadingIcon="account-group-outline"
+                    title={g.name}
+                    subtitle={g.slots ?? 'No weekly slot yet'}
+                    chevron
+                    onPress={() => router.push({ pathname: '/group/[id]', params: { id: g.id } })}
                   />
                 </View>
-              </Card>
-            ) : (
-              <Card padded={false}>
-                {data.slots.map((slot, i) => (
-                  <View key={slot.id}>
-                    {i > 0 && <Divider inset={68} />}
-                    <ListRow
-                      leadingIcon="calendar-clock"
-                      title={describeSlot(slot)}
-                      subtitle={[
-                        formatDuration(slot.durationMin),
-                        slot.location,
-                        slot.startsOn > today() ? `Starts ${formatShortDate(slot.startsOn)}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                      chevron
-                      onPress={() =>
-                        router.push({ pathname: '/student/[id]/slot', params: { id, slotId: slot.id } })
-                      }
-                    />
-                  </View>
-                ))}
-              </Card>
-            )}
+              ))}
+            </Card>
           </Section>
         )}
 
@@ -412,7 +386,7 @@ export default function StudentPage() {
         </Section>
       </Animated.View>
 
-      <LessonSheet lesson={selected} onClose={() => setSelected(null)} fromStudent />
+      <LessonSheet lesson={selected} onClose={() => setSelected(null)} ownerId={id} />
       <View style={[styles.bottomSpace, { backgroundColor: colors.background }]} />
     </Screen>
   );

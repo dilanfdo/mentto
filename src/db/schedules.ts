@@ -3,9 +3,13 @@ import { formatRule, parseRule, type WeeklyRule } from '@/lib/recurrence';
 
 import { newId, timestamp, write, type DB } from './core';
 
+/** A slot belongs to exactly one student or one group. */
+export type SlotOwner = { studentId: string; groupId?: undefined } | { groupId: string; studentId?: undefined };
+
 export type Schedule = {
   id: string;
-  studentId: string;
+  studentId: string | null;
+  groupId: string | null;
   rule: WeeklyRule;
   startTime: ISOTime;
   durationMin: number;
@@ -14,7 +18,7 @@ export type Schedule = {
   location: string | null;
 };
 
-export type ScheduleInput = Omit<Schedule, 'id' | 'studentId'>;
+export type ScheduleInput = Omit<Schedule, 'id' | 'studentId' | 'groupId'>;
 
 export type ScheduleException = {
   id: string;
@@ -37,7 +41,8 @@ export type Session = {
 
 type ScheduleRow = {
   id: string;
-  student_id: string;
+  student_id: string | null;
+  group_id: string | null;
   rrule: string;
   start_time: string;
   duration_min: number;
@@ -49,6 +54,7 @@ type ScheduleRow = {
 const toSchedule = (r: ScheduleRow): Schedule => ({
   id: r.id,
   studentId: r.student_id,
+  groupId: r.group_id,
   rule: parseRule(r.rrule),
   startTime: r.start_time,
   durationMin: r.duration_min,
@@ -57,36 +63,42 @@ const toSchedule = (r: ScheduleRow): Schedule => ({
   location: r.location,
 });
 
-/** Slots of active students that overlap [from, to]. */
+/** Joins a slot to its owner so slots of archived students or groups drop out. */
+const OWNER_JOIN = `LEFT JOIN students st ON st.id = s.student_id
+  LEFT JOIN groups g ON g.id = s.group_id`;
+const OWNER_ACTIVE = `(st.status = 'active' OR g.status = 'active')`;
+
+/** Slots of active students and groups that overlap [from, to]. */
 export async function listSchedulesInRange(db: DB, from: ISODate, to: ISODate): Promise<Schedule[]> {
   const rows = await db.getAllAsync<ScheduleRow>(
-    `SELECT s.* FROM schedules s JOIN students st ON st.id = s.student_id
-     WHERE st.status = 'active' AND s.starts_on <= ? AND (s.ends_on IS NULL OR s.ends_on >= ?)`,
+    `SELECT s.* FROM schedules s ${OWNER_JOIN}
+     WHERE ${OWNER_ACTIVE} AND s.starts_on <= ? AND (s.ends_on IS NULL OR s.ends_on >= ?)`,
     to,
     from,
   );
   return rows.map(toSchedule);
 }
 
-/** A student's slots that haven't ended. */
-export async function listStudentSchedules(db: DB, studentId: string): Promise<Schedule[]> {
+/** A student's or group's slots that haven't ended (including upcoming one-off lessons). */
+export async function listOwnerSchedules(db: DB, owner: SlotOwner): Promise<Schedule[]> {
+  const column = owner.studentId ? 'student_id' : 'group_id';
   const rows = await db.getAllAsync<ScheduleRow>(
-    `SELECT * FROM schedules WHERE student_id = ? AND (ends_on IS NULL OR ends_on >= ?)
-     ORDER BY start_time`,
-    studentId,
+    `SELECT * FROM schedules WHERE ${column} = ? AND (ends_on IS NULL OR ends_on >= ?)
+     ORDER BY starts_on, start_time`,
+    owner.studentId ?? owner.groupId,
     today(),
   );
   return rows.map(toSchedule);
 }
 
-/** Every current slot of every active student, with the student's name, for clash checks and lists. */
-export async function listActiveSchedules(db: DB): Promise<(Schedule & { studentName: string })[]> {
-  const rows = await db.getAllAsync<ScheduleRow & { student_name: string }>(
-    `SELECT s.*, st.name AS student_name FROM schedules s JOIN students st ON st.id = s.student_id
-     WHERE st.status = 'active' AND (s.ends_on IS NULL OR s.ends_on >= ?)`,
+/** Every current slot of active students and groups, with the owner's name, for clash checks and lists. */
+export async function listActiveSchedules(db: DB): Promise<(Schedule & { ownerName: string })[]> {
+  const rows = await db.getAllAsync<ScheduleRow & { owner_name: string }>(
+    `SELECT s.*, COALESCE(st.name, g.name) AS owner_name FROM schedules s ${OWNER_JOIN}
+     WHERE ${OWNER_ACTIVE} AND (s.ends_on IS NULL OR s.ends_on >= ?)`,
     today(),
   );
-  return rows.map((r) => ({ ...toSchedule(r), studentName: r.student_name }));
+  return rows.map((r) => ({ ...toSchedule(r), ownerName: r.owner_name }));
 }
 
 export async function getSchedule(db: DB, id: string): Promise<Schedule | null> {
@@ -94,13 +106,10 @@ export async function getSchedule(db: DB, id: string): Promise<Schedule | null> 
   return row ? toSchedule(row) : null;
 }
 
-export async function saveSchedule(
-  db: DB,
-  studentId: string,
-  input: ScheduleInput,
-  id?: string,
-): Promise<void> {
+export async function saveSchedule(db: DB, owner: SlotOwner, input: ScheduleInput, id?: string): Promise<void> {
   const now = timestamp();
+  // A one-off lesson is a slot that starts and ends on its day.
+  const endsOn = input.rule.once ? input.startsOn : input.endsOn;
   await write(db, async () => {
     if (id) {
       await db.runAsync(
@@ -110,27 +119,36 @@ export async function saveSchedule(
         input.startTime,
         input.durationMin,
         input.startsOn,
-        input.endsOn,
+        endsOn,
         input.location?.trim() || null,
         now,
         id,
       );
     } else {
       await db.runAsync(
-        `INSERT INTO schedules (id, student_id, rrule, start_time, duration_min, starts_on, ends_on, location, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO schedules (id, student_id, group_id, rrule, start_time, duration_min, starts_on, ends_on, location, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         newId(),
-        studentId,
+        owner.studentId ?? null,
+        owner.groupId ?? null,
         formatRule(input.rule),
         input.startTime,
         input.durationMin,
         input.startsOn,
-        input.endsOn,
+        endsOn,
         input.location?.trim() || null,
         now,
         now,
       );
     }
+  });
+}
+
+/** Removes a one-off lesson together with any attendance recorded for it. */
+export async function deleteSchedule(db: DB, id: string): Promise<void> {
+  await write(db, async () => {
+    await db.runAsync('DELETE FROM sessions WHERE schedule_id = ?', id);
+    await db.runAsync('DELETE FROM schedules WHERE id = ?', id);
   });
 }
 
@@ -266,7 +284,7 @@ export async function listAttendedSessions(db: DB, studentId?: string): Promise<
   return rows.map(toSession);
 }
 
-/** Records attendance for a lesson, replacing any earlier mark for the same lesson. */
+/** Records one student's attendance at a lesson, replacing any earlier mark they had for it. */
 export async function markLesson(
   db: DB,
   lesson: { studentId: string; scheduleId: string; startsAt: LocalDateTime; durationMin: number },
@@ -275,9 +293,10 @@ export async function markLesson(
   const now = timestamp();
   await write(db, async () => {
     await db.runAsync(
-      'DELETE FROM sessions WHERE schedule_id = ? AND starts_at = ?',
+      'DELETE FROM sessions WHERE schedule_id = ? AND starts_at = ? AND student_id = ?',
       lesson.scheduleId,
       lesson.startsAt,
+      lesson.studentId,
     );
     if (status) {
       await db.runAsync(

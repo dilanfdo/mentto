@@ -13,13 +13,24 @@ attendance, payments, reminders). v1 is Android-first and tutor-only; there is n
 
 ### Layout
 
-- `src/app/` routes: `(tabs)/` Today, Students, Schedule, Fees; `student/[id]/` page plus edit, slot, plan
-  and payment forms; `onboarding`, `settings`, `backup` (sign-in and restore).
+- `src/app/` routes: `(tabs)/` Today, Students (students and groups), Schedule, Fees; `student/[id]/` page
+  plus edit, plan and payment forms; `group/[id]/` page plus edit, `group/new`; `slot` (weekly slot or
+  one-off lesson for a student or group); `onboarding`, `settings`, `backup` (sign-in and restore).
+- A slot belongs to exactly one student or one group (`schedules.student_id` xor `group_id`). One-off
+  lessons are slots with `rrule = FREQ=ONCE` and `ends_on = starts_on`, so moves, cancellations,
+  attendance and reminders work the same for them. Attendance is per student (`sessions.student_id`),
+  including in group lessons, so per-lesson fees stay per student.
+- Fee plans: `monthly`, `term` (every `period_months`) or `per_session`; amounts are per student.
+- Migrations run with foreign keys off (table rebuilds would otherwise cascade-delete children) and
+  fail if `PRAGMA foreign_key_check` finds broken references.
 - `src/db/` data access (one file per area, plus `core.ts` with `write()` and `useQuery()`).
   `useQuery` re-runs automatically after any `write()`; always write through `write()`.
 - `src/domain/` derived data: `lessons.ts` expands slots + exceptions + attendance into lessons,
   `fees.ts` turns plans, attendance and payments into balances (payments settle the oldest charge first).
-- `src/notifications/` local reminders (rolling window, rescheduled on any data change).
+- `src/notifications/` local reminders (rolling window, rescheduled on any data change). Lesson reminders
+  show the time range rather than "in N min", since Android may deliver them a few minutes late.
+- Tests: `npm test` (jest-expo) covers recurrence, lesson expansion and fee balances. Keep domain logic
+  pure (`expandLessons`, `computeFeeStatus`, `chargesFor`) so it stays testable without a device.
 - `src/backup/` Google Drive auto-backup: `engine.ts` (debounced after writes, on background, retried on
   foreground/reconnect), `snapshot.ts` (`VACUUM INTO` + gzip, and restore into the live connection),
   `retention.ts` (latest, 7 daily, 4 weekly, plus each other phone's newest), `drive.ts` (REST, appDataFolder

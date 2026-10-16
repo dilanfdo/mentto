@@ -37,7 +37,9 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
           <Stack.Screen name="student/new" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen name="student/[id]/edit" options={{ animation: 'slide_from_bottom' }} />
-          <Stack.Screen name="student/[id]/slot" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="slot" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="group/new" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="group/[id]/edit" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen name="student/[id]/plan" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen name="student/[id]/payment" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen name="backup" options={{ animation: 'slide_from_bottom' }} />

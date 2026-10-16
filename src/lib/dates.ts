@@ -132,6 +132,12 @@ export function formatRelativeDay(date: ISODate, reference: ISODate = today()): 
   return formatShortDate(date, reference);
 }
 
+/** formatRelativeDay for the middle of a sentence: "today", "tomorrow", "yesterday" in lower case. */
+export function formatRelativeDayInline(date: ISODate, reference: ISODate = today()): string {
+  const day = formatRelativeDay(date, reference);
+  return ['Today', 'Tomorrow', 'Yesterday'].includes(day) ? day.toLowerCase() : day;
+}
+
 export function formatShortDate(date: ISODate, reference: ISODate = today()): string {
   const sameYear = date.slice(0, 4) === reference.slice(0, 4);
   return (sameYear ? dayMonth : dayMonthYear).format(parseDate(date));

@@ -1,7 +1,8 @@
 import { daysBetween, startOfWeek, weekday, type ISODate } from './dates';
 
-// Slots repeat weekly. They are stored as an RFC 5545 RRULE subset so the format can grow later
-// (e.g. FREQ=MONTHLY) without a migration: FREQ=WEEKLY;INTERVAL=n;BYDAY=MO,WE.
+// Slots repeat weekly, or happen once (a one-off or extra lesson). They are stored as an RFC 5545
+// RRULE subset so the format can grow later without a migration: FREQ=WEEKLY;INTERVAL=n;BYDAY=MO,WE,
+// or FREQ=ONCE for a single lesson on the slot's start date.
 
 const CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
@@ -10,9 +11,14 @@ export type WeeklyRule = {
   interval: number;
   /** Days of the week, 0 = Sunday … 6 = Saturday. */
   days: number[];
+  /** A single lesson on the slot's start date; `interval` and `days` are ignored. */
+  once?: boolean;
 };
 
+export const ONCE: WeeklyRule = { interval: 1, days: [], once: true };
+
 export function formatRule(rule: WeeklyRule): string {
+  if (rule.once) return 'FREQ=ONCE';
   const days = [...rule.days].sort((a, b) => a - b).map((d) => CODES[d]);
   return `FREQ=WEEKLY;INTERVAL=${rule.interval};BYDAY=${days.join(',')}`;
 }
@@ -21,6 +27,7 @@ export function parseRule(rrule: string): WeeklyRule {
   const parts = Object.fromEntries(
     rrule.split(';').map((p) => p.split('=') as [string, string]),
   );
+  if (parts.FREQ === 'ONCE') return ONCE;
   const interval = Math.max(1, Number(parts.INTERVAL ?? 1) || 1);
   const days = (parts.BYDAY ?? '')
     .split(',')
@@ -35,6 +42,7 @@ export function occursOn(
   endsOn: ISODate | null,
   date: ISODate,
 ): boolean {
+  if (rule.once) return date === startsOn;
   if (date < startsOn || (endsOn && date > endsOn)) return false;
   if (!rule.days.includes(weekday(date))) return false;
   if (rule.interval === 1) return true;
@@ -54,6 +62,7 @@ export function dayName(day: number, style: 'short' | 'long' = 'short'): string 
 
 /** "Every Tue & Thu", "Every other Mon", "Every day". */
 export function describeRule(rule: WeeklyRule): string {
+  if (rule.once) return 'One-off lesson';
   const sorted = WEEK_ORDER.filter((d) => rule.days.includes(d));
   const prefix = rule.interval === 2 ? 'Every other' : 'Every';
   if (sorted.length === 7) return rule.interval === 2 ? 'Every other week, daily' : 'Every day';

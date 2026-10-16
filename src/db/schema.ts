@@ -94,6 +94,53 @@ const MIGRATIONS: string[] = [
   CREATE INDEX idx_payments_student_paid ON payments (student_id, paid_on);
   CREATE INDEX idx_schedules_student ON schedules (student_id);
   `,
+
+  // 2: group classes, one-off lessons (rrule FREQ=ONCE, no schema change) and per-term fees.
+  `
+  CREATE TABLE groups (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    notes TEXT,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE group_members (
+    group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    added_on TEXT NOT NULL,
+    PRIMARY KEY (group_id, student_id)
+  );
+
+  -- A slot now belongs to either one student or one group.
+  CREATE TABLE schedules_new (
+    id TEXT PRIMARY KEY NOT NULL,
+    student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+    group_id TEXT REFERENCES groups(id) ON DELETE CASCADE,
+    rrule TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    duration_min INTEGER NOT NULL,
+    starts_on TEXT NOT NULL,
+    ends_on TEXT,
+    location TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    CHECK ((student_id IS NULL) <> (group_id IS NULL))
+  );
+  INSERT INTO schedules_new (id, student_id, group_id, rrule, start_time, duration_min, starts_on, ends_on, location, created_at, updated_at)
+    SELECT id, student_id, NULL, rrule, start_time, duration_min, starts_on, ends_on, location, created_at, updated_at
+    FROM schedules;
+  DROP TABLE schedules;
+  ALTER TABLE schedules_new RENAME TO schedules;
+  CREATE INDEX idx_schedules_student ON schedules (student_id);
+  CREATE INDEX idx_schedules_group ON schedules (group_id);
+  CREATE INDEX idx_group_members_student ON group_members (student_id);
+
+  -- How many months a monthly (1) or per-term (2, 3, 4, 6…) plan covers.
+  ALTER TABLE fee_plans ADD COLUMN period_months INTEGER;
+  UPDATE fee_plans SET period_months = 1 WHERE kind = 'monthly';
+  `,
 ];
 
 /** The schema version a fully migrated database reports in PRAGMA user_version. */
@@ -108,12 +155,24 @@ export async function migrateDatabase(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   let version = row?.user_version ?? 0;
 
-  while (version < MIGRATIONS.length) {
-    const migration = MIGRATIONS[version];
-    await db.withTransactionAsync(async () => {
-      await db.execAsync(migration);
-      await db.execAsync(`PRAGMA user_version = ${version + 1}`);
-    });
-    version += 1;
+  if (version >= MIGRATIONS.length) return;
+
+  // Some migrations rebuild a table. With foreign keys on, dropping the old table would cascade
+  // and delete its children, so they're off while migrating and checked afterwards. (The pragma
+  // has no effect inside a transaction, which is why it's set out here.)
+  await db.execAsync('PRAGMA foreign_keys = OFF');
+  try {
+    while (version < MIGRATIONS.length) {
+      const migration = MIGRATIONS[version];
+      await db.withTransactionAsync(async () => {
+        await db.execAsync(migration);
+        const broken = await db.getAllAsync('PRAGMA foreign_key_check');
+        if (broken.length > 0) throw new Error(`Migration ${version + 1} left ${broken.length} broken references`);
+        await db.execAsync(`PRAGMA user_version = ${version + 1}`);
+      });
+      version += 1;
+    }
+  } finally {
+    await db.execAsync('PRAGMA foreign_keys = ON');
   }
 }

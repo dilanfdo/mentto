@@ -6,6 +6,7 @@ import { Alert, StyleSheet, View } from 'react-native';
 import {
   Button,
   Card,
+  ChipGroup,
   DateField,
   Icon,
   Screen,
@@ -19,9 +20,10 @@ import { useQuery } from '@/db/core';
 import { currentPlan, endPlan, listPlans, savePlan, type FeeKind, type FeePlan } from '@/db/fees';
 import { getSettings } from '@/db/settings';
 import { getStudent, type Student } from '@/db/students';
-import { nextMonthlyCharge } from '@/domain/fees';
+import { nextPeriodicCharge } from '@/domain/fees';
 import { formatShortDate, ordinal, parseDate, today } from '@/lib/dates';
 import { currencySymbol, formatMoney, parseMoney, toMoneyInput } from '@/lib/money';
+import { termLength } from '@/lib/summaries';
 import { spacing } from '@/theme';
 
 export default function PlanForm() {
@@ -52,12 +54,14 @@ function PlanBody({ id, student, plan, defaultCurrency }: BodyProps) {
   const db = useSQLiteContext();
   const snackbar = useSnackbar();
   // A change normally applies from the next due date, leaving past charges alone.
-  const next = nextMonthlyCharge(plan, today());
+  const next = nextPeriodicCharge(plan, today());
 
   const [kind, setKind] = useState<FeeKind>(plan?.kind ?? 'monthly');
+  const [termMonths, setTermMonths] = useState(plan?.kind === 'term' ? (plan.periodMonths ?? 3) : 3);
   const [amount, setAmount] = useState(plan ? toMoneyInput(plan.amount, plan.currency) : '');
-  const [startsOn, setStartsOn] = useState(plan?.kind === 'monthly' && next ? next.date : today());
+  const [startsOn, setStartsOn] = useState(next ? next.date : today());
   const [error, setError] = useState<string | null>(null);
+  const periodic = kind !== 'per_session';
 
   const currency = plan?.currency ?? defaultCurrency;
   const firstName = student.name.split(' ')[0];
@@ -68,7 +72,9 @@ function PlanBody({ id, student, plan, defaultCurrency }: BodyProps) {
     parsed && parsed > 0
       ? kind === 'monthly'
         ? `${formatMoney(parsed, currency)} is added on the ${ordinal(day)} of every month, starting ${formatShortDate(startsOn)}.`
-        : `${formatMoney(parsed, currency)} is added for every lesson ${firstName} attends from ${formatShortDate(startsOn)}. Missed and cancelled lessons aren’t charged.`
+        : kind === 'term'
+          ? `${formatMoney(parsed, currency)} is added every ${termLength(termMonths)} on the ${ordinal(day)}, starting ${formatShortDate(startsOn)}.`
+          : `${formatMoney(parsed, currency)} is added for every lesson ${firstName} attends from ${formatShortDate(startsOn)}. Missed and cancelled lessons aren’t charged.`
       : null;
 
   const save = async () => {
@@ -76,7 +82,7 @@ function PlanBody({ id, student, plan, defaultCurrency }: BodyProps) {
       setError('Enter an amount');
       return;
     }
-    await savePlan(db, id, { kind, amount: parsed, currency, startsOn });
+    await savePlan(db, id, { kind, amount: parsed, currency, startsOn, periodMonths: termMonths });
     router.back();
     snackbar('Fee plan saved', { icon: 'check-circle-outline' });
   };
@@ -108,6 +114,7 @@ function PlanBody({ id, student, plan, defaultCurrency }: BodyProps) {
       <SegmentedControl
         options={[
           { value: 'monthly', label: 'Monthly' },
+          { value: 'term', label: 'Per term' },
           { value: 'per_session', label: 'Per lesson' },
         ]}
         value={kind}
@@ -118,7 +125,7 @@ function PlanBody({ id, student, plan, defaultCurrency }: BodyProps) {
       />
 
       <TextField
-        label={kind === 'monthly' ? 'Monthly fee' : 'Fee per lesson'}
+        label={kind === 'monthly' ? 'Monthly fee' : kind === 'term' ? 'Fee per term' : 'Fee per lesson'}
         value={amount}
         onChangeText={(t) => {
           setAmount(t);
@@ -131,15 +138,30 @@ function PlanBody({ id, student, plan, defaultCurrency }: BodyProps) {
         autoFocus={!plan}
       />
 
+      {kind === 'term' && (
+        <View style={styles.group}>
+          <Text variant="labelStrong" color="textSecondary">
+            Term length
+          </Text>
+          <ChipGroup
+            options={TERM_LENGTHS.map((m) => ({ value: m, label: termLength(m) }))}
+            value={termMonths}
+            onChange={setTermMonths}
+          />
+        </View>
+      )}
+
       <DateField
-        label={plan ? 'Applies from' : kind === 'monthly' ? 'First payment due' : 'Charge lessons from'}
+        label={plan ? 'Applies from' : periodic ? 'First payment due' : 'Charge lessons from'}
         value={startsOn}
         onChange={setStartsOn}
         hint={
-          kind === 'monthly'
+          periodic
             ? parseDate(startsOn).getDate() > 28
-              ? 'Later months fall due on the 28th so every month has the date.'
-              : 'Fees fall due on this day each month.'
+              ? 'Later payments fall due on the 28th so every month has the date.'
+              : kind === 'term'
+                ? 'Each term’s fee falls due on this day of the month.'
+                : 'Fees fall due on this day each month.'
             : undefined
         }
       />
@@ -163,7 +185,12 @@ function PlanBody({ id, student, plan, defaultCurrency }: BodyProps) {
   );
 }
 
+const TERM_LENGTHS = [2, 3, 4, 6, 12];
+
 const styles = StyleSheet.create({
+  group: {
+    gap: spacing.xs,
+  },
   content: {
     gap: spacing.lg,
     paddingTop: spacing.sm,

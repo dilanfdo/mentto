@@ -10,6 +10,7 @@ import {
   EmptyState,
   ErrorState,
   Fab,
+  Icon,
   ListRow,
   Screen,
   SegmentedControl,
@@ -17,6 +18,7 @@ import {
   TextField,
 } from '@/components/ui';
 import { useQuery, type DB } from '@/db/core';
+import { listGroups } from '@/db/groups';
 import { listActiveSchedules } from '@/db/schedules';
 import { getSettings } from '@/db/settings';
 import { countStudents, listStudents, type StudentStatus } from '@/db/students';
@@ -41,7 +43,7 @@ async function loadStudents(db: DB, status: StudentStatus) {
   }));
 }
 
-export default function StudentsScreen() {
+function StudentsList() {
   const { colors } = useTheme();
   const [status, setStatus] = useState<StudentStatus>('active');
   const [search, setSearch] = useState('');
@@ -59,12 +61,6 @@ export default function StudentsScreen() {
   }, [data, search]);
 
   const total = data?.[0]?.counts;
-  const subtitle =
-    status === 'active'
-      ? total
-        ? `${total.active} active`
-        : undefined
-      : 'Students you’ve stopped teaching';
 
   const header = (
     <View style={styles.header}>
@@ -93,7 +89,7 @@ export default function StudentsScreen() {
   );
 
   return (
-    <Screen inTabs scroll={false} largeTitle="Students" subtitle={subtitle} hideAppBar>
+    <>
       {error ? (
         <ErrorState message={error.message} />
       ) : loading && !data ? (
@@ -115,6 +111,9 @@ export default function StudentsScreen() {
             const last = index === filtered.length - 1;
             return (
               <View
+                // Remount when a row's rounded corners change (list grew or shrank); Android otherwise
+                // keeps the old clip and can leave the row blank.
+                key={`${first}-${last}`}
                 style={[
                   { backgroundColor: colors.surface, borderColor: colors.border },
                   styles.item,
@@ -162,11 +161,106 @@ export default function StudentsScreen() {
       {status === 'active' && (data?.length ?? 0) > 0 && (
         <Fab icon="account-plus-outline" label="Add student" onPress={() => router.push('/student/new')} />
       )}
+    </>
+  );
+}
+
+async function loadGroups(db: DB) {
+  const [groups, schedules] = await Promise.all([listGroups(db), listActiveSchedules(db)]);
+  return groups.map((g) => ({ group: g, slots: summarizeSlots(schedules.filter((s) => s.groupId === g.id)) }));
+}
+
+function GroupsList() {
+  const { colors } = useTheme();
+  const { data, error, loading } = useQuery(loadGroups, []);
+
+  if (error) return <ErrorState message={error.message} />;
+  if (loading && !data) {
+    return (
+      <View style={styles.pad}>
+        <SkeletonList rows={4} />
+      </View>
+    );
+  }
+  const groups = data ?? [];
+  return (
+    <>
+      <FlatList
+        data={groups}
+        keyExtractor={(item) => item.group.id}
+        contentContainerStyle={styles.listContent}
+        ItemSeparatorComponent={() => <Divider inset={72} />}
+        renderItem={({ item, index }) => (
+          <View
+            key={`${index === 0}-${index === groups.length - 1}`}
+            style={[
+              { backgroundColor: colors.surface, borderColor: colors.border },
+              styles.item,
+              index === 0 && styles.first,
+              index === groups.length - 1 && styles.last,
+            ]}
+          >
+            <ListRow
+              title={item.group.name}
+              subtitle={[
+                `${item.group.members.length} ${item.group.members.length === 1 ? 'student' : 'students'}`,
+                item.slots ?? 'No weekly slot yet',
+              ].join(' · ')}
+              leading={
+                <View style={[styles.groupIcon, { backgroundColor: colors.primarySoft }]}>
+                  <Icon name="account-group" size={22} color="onPrimarySoft" />
+                </View>
+              }
+              chevron
+              onPress={() => router.push({ pathname: '/group/[id]', params: { id: item.group.id } })}
+            />
+          </View>
+        )}
+        ListEmptyComponent={
+          <EmptyState
+            icon="account-group-outline"
+            title="Teach classes?"
+            message="Put students in a group to schedule one class for all of them and take attendance together."
+            action={<Button label="New group" icon="plus" onPress={() => router.push('/group/new')} />}
+          />
+        }
+      />
+      {groups.length > 0 && <Fab icon="account-multiple-plus-outline" label="New group" onPress={() => router.push('/group/new')} />}
+    </>
+  );
+}
+
+export default function StudentsScreen() {
+  const [view, setView] = useState<'students' | 'groups'>('students');
+  return (
+    <Screen inTabs scroll={false} largeTitle="Students" hideAppBar>
+      <View style={styles.switcher}>
+        <SegmentedControl
+          options={[
+            { value: 'students', label: 'Students' },
+            { value: 'groups', label: 'Groups' },
+          ]}
+          value={view}
+          onChange={setView}
+        />
+      </View>
+      {view === 'students' ? <StudentsList /> : <GroupsList />}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  switcher: {
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  groupIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   pad: {
     paddingHorizontal: spacing.md,
   },

@@ -2,7 +2,7 @@ import { addDays, parseDate, today, type ISODate } from '@/lib/dates';
 
 import { newId, timestamp, write, type DB } from './core';
 
-export type FeeKind = 'monthly' | 'per_session';
+export type FeeKind = 'monthly' | 'term' | 'per_session';
 
 export type FeePlan = {
   id: string;
@@ -10,8 +10,10 @@ export type FeePlan = {
   kind: FeeKind;
   amount: number;
   currency: string;
-  /** Monthly plans: the day of the month fees fall due (1–28). */
+  /** Monthly and per-term plans: the day of the month fees fall due (1–28). */
   dueDay: number | null;
+  /** Per-term plans: months per term (monthly plans are 1). */
+  periodMonths: number | null;
   /** Monthly plans: the first due date. Per-lesson plans: the first lesson that is charged. */
   startsOn: ISODate;
   endsOn: ISODate | null;
@@ -36,6 +38,7 @@ type PlanRow = {
   amount: number;
   currency: string;
   due_day: number | null;
+  period_months: number | null;
   starts_on: string;
   ends_on: string | null;
 };
@@ -47,6 +50,7 @@ const toPlan = (r: PlanRow): FeePlan => ({
   amount: r.amount,
   currency: r.currency,
   dueDay: r.due_day,
+  periodMonths: r.period_months,
   startsOn: r.starts_on,
   endsOn: r.ends_on,
 });
@@ -84,7 +88,14 @@ export function currentPlan(plans: FeePlan[]): FeePlan | null {
   return plans.filter((p) => !p.endsOn || p.endsOn >= t).at(-1) ?? null;
 }
 
-export type PlanInput = { kind: FeeKind; amount: number; currency: string; startsOn: ISODate };
+export type PlanInput = {
+  kind: FeeKind;
+  amount: number;
+  currency: string;
+  startsOn: ISODate;
+  /** Months per term; only used by per-term plans. */
+  periodMonths?: number;
+};
 
 /**
  * Starts a new plan. Earlier plans stop the day before it begins, so past charges keep the price
@@ -93,7 +104,9 @@ export type PlanInput = { kind: FeeKind; amount: number; currency: string; start
 export async function savePlan(db: DB, studentId: string, input: PlanInput): Promise<void> {
   const existing = await listPlans(db, studentId);
   const dayBefore = addDays(input.startsOn, -1);
-  const dueDay = input.kind === 'monthly' ? Math.min(parseDate(input.startsOn).getDate(), 28) : null;
+  const periodic = input.kind === 'monthly' || input.kind === 'term';
+  const dueDay = periodic ? Math.min(parseDate(input.startsOn).getDate(), 28) : null;
+  const periodMonths = input.kind === 'monthly' ? 1 : input.kind === 'term' ? (input.periodMonths ?? 3) : null;
   const now = timestamp();
 
   await write(db, async () => {
@@ -106,14 +119,15 @@ export async function savePlan(db: DB, studentId: string, input: PlanInput): Pro
       }
     }
     await db.runAsync(
-      `INSERT INTO fee_plans (id, student_id, kind, amount, currency, due_day, starts_on, ends_on, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+      `INSERT INTO fee_plans (id, student_id, kind, amount, currency, due_day, period_months, starts_on, ends_on, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
       newId(),
       studentId,
       input.kind,
       input.amount,
       input.currency,
       dueDay,
+      periodMonths,
       input.startsOn,
       now,
       now,

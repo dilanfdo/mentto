@@ -30,6 +30,7 @@ import {
   addDays,
   formatLongDate,
   formatRelativeDay,
+  formatRelativeDayInline,
   formatShortDate,
   formatTime,
   greeting,
@@ -174,7 +175,7 @@ export default function TodayScreen() {
                   <Text variant="bodyStrong">No lessons today</Text>
                   <Text variant="label" color="textSecondary">
                     {data.next
-                      ? `Next: ${data.next.studentName}, ${formatRelativeDay(data.next.date)} at ${formatTime(data.next.startTime)}`
+                      ? `Next: ${data.next.title}, ${formatRelativeDayInline(data.next.date)} at ${formatTime(data.next.startTime)}`
                       : 'Give a student a weekly time slot to see lessons here.'}
                   </Text>
                 </View>
@@ -186,7 +187,7 @@ export default function TodayScreen() {
                 ))}
                 {data.next && (
                   <Text variant="label" color="textSecondary" style={styles.nextLine}>
-                    Next: {data.next.studentName}, {formatRelativeDay(data.next.date)} at{' '}
+                    Next: {data.next.title}, {formatRelativeDayInline(data.next.date)} at{' '}
                     {formatTime(data.next.startTime)}
                   </Text>
                 )}

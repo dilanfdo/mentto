@@ -5,7 +5,7 @@ import type { DB } from '@/db/core';
 import { getSettings } from '@/db/settings';
 import { loadAllFeeStatuses } from '@/domain/fees';
 import { loadLessons } from '@/domain/lessons';
-import { addDays, formatShortDate, formatTime, toDate, today } from '@/lib/dates';
+import { addDays, formatShortDate, formatTimeRange, toDate, today } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
 
 // Reminders are local notifications scheduled on this device. We keep a rolling window: on every
@@ -78,10 +78,9 @@ export async function rescheduleReminders(db: DB): Promise<void> {
       if (at.getTime() <= now) continue;
       planned.push({
         at,
-        title: `${lesson.studentName} at ${formatTime(lesson.startTime)}`,
-        body: lesson.location
-          ? `Lesson in ${settings.lessonReminderMin} min · ${lesson.location}`
-          : `Lesson in ${settings.lessonReminderMin} min`,
+        title: lesson.title,
+        // The time range rather than "in 30 min": Android may deliver a reminder a few minutes late.
+        body: [`Lesson ${formatTimeRange(lesson.startTime, lesson.durationMin)}`, lesson.location].filter(Boolean).join(' · '),
         channelId: CHANNELS.lessons,
       });
     }
@@ -113,7 +112,7 @@ export async function rescheduleReminders(db: DB): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
   for (const p of planned.slice(0, MAX_PENDING)) {
     await Notifications.scheduleNotificationAsync({
-      content: { title: p.title, body: p.body },
+      content: { title: p.title, body: p.body, sound: 'default' },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: p.at, channelId: p.channelId },
     });
   }

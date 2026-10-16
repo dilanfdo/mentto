@@ -160,15 +160,15 @@ export default function ScheduleScreen() {
         </ScrollView>
       )}
 
-      <Fab icon="calendar-plus" label="Add slot" onPress={() => setPicking(true)} />
+      <Fab icon="calendar-plus" label="Add lesson" onPress={() => setPicking(true)} />
       <LessonSheet lesson={selected} onClose={() => setSelected(null)} />
       <StudentPickerSheet
         visible={picking}
-        title="Add a weekly slot for…"
+        title="Add a lesson for…"
         onClose={() => setPicking(false)}
-        onPick={(id) => {
+        onPick={(owner) => {
           setPicking(false);
-          router.push({ pathname: '/student/[id]/slot', params: { id } });
+          router.push({ pathname: '/slot', params: owner.studentId ? { studentId: owner.studentId } : { groupId: owner.groupId! } });
         }}
         onAddStudent={() => {
           setPicking(false);

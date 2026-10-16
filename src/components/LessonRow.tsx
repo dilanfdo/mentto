@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import type { Lesson } from '@/domain/lessons';
+import { attendedCount, type Lesson } from '@/domain/lessons';
 import {
   formatDuration,
   formatShortDate,
@@ -42,8 +42,13 @@ export function LessonRow({ lesson, onPress, showDate, hideName }: Props) {
           ? 'borderStrong'
           : 'primary';
 
+  const isGroup = !!lesson.groupId;
+  // On a student's own page a group lesson is named by its group; elsewhere by its size.
+  const groupDetail = isGroup ? (hideName ? lesson.title : `${lesson.members.length} students`) : null;
   const details = [
     showDate && !hideName ? `${formatWeekday(lesson.date, 'short')} ${formatShortDate(lesson.date)}` : null,
+    groupDetail,
+    lesson.once ? 'One-off' : null,
     formatDuration(lesson.durationMin),
     lesson.location,
     lesson.moved ? `Moved from ${formatShortDate(lesson.originalDate)}` : null,
@@ -51,8 +56,14 @@ export function LessonRow({ lesson, onPress, showDate, hideName }: Props) {
     .filter(Boolean)
     .join(' · ');
 
+  // Group lessons on the shared schedule show a head count rather than one person's status.
+  const showCount = isGroup && !hideName && lesson.status !== 'cancelled';
+  const came = attendedCount(lesson);
+  const marked = lesson.members.filter((m) => m.status !== 'upcoming').length;
   const statusLabel =
-    lesson.status === 'attended'
+    showCount && marked > 0
+      ? `${came}/${lesson.members.length} came`
+      : lesson.status === 'attended'
       ? 'Attended'
       : lesson.status === 'missed'
         ? 'Missed'
@@ -67,7 +78,7 @@ export function LessonRow({ lesson, onPress, showDate, hideName }: Props) {
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={[
-        hideName ? null : lesson.studentName,
+        hideName ? null : lesson.title,
         formatTime(lesson.startTime),
         details,
         statusLabel,
@@ -91,7 +102,7 @@ export function LessonRow({ lesson, onPress, showDate, hideName }: Props) {
           color={lesson.status === 'cancelled' ? 'textTertiary' : 'text'}
           style={lesson.status === 'cancelled' && styles.struck}
         >
-          {hideName ? `${formatWeekday(lesson.date, 'short')}, ${formatShortDate(lesson.date)}` : lesson.studentName}
+          {hideName ? `${formatWeekday(lesson.date, 'short')}, ${formatShortDate(lesson.date)}` : lesson.title}
         </Text>
         <Text variant="label" color="textSecondary" numberOfLines={1}>
           {details}
@@ -110,7 +121,9 @@ export function LessonRow({ lesson, onPress, showDate, hideName }: Props) {
                   : 'primary'
           }
           icon={
-            lesson.status === 'attended'
+            showCount && marked > 0
+              ? 'account-check-outline'
+              : lesson.status === 'attended'
               ? 'check'
               : lesson.status === 'missed'
                 ? 'close'
