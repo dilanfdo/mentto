@@ -14,12 +14,20 @@ attendance, payments, reminders). v1 is Android-first and tutor-only; there is n
 ### Layout
 
 - `src/app/` routes: `(tabs)/` Today, Students, Schedule, Fees; `student/[id]/` page plus edit, slot, plan
-  and payment forms; `onboarding`, `settings`.
+  and payment forms; `onboarding`, `settings`, `backup` (sign-in and restore).
 - `src/db/` data access (one file per area, plus `core.ts` with `write()` and `useQuery()`).
   `useQuery` re-runs automatically after any `write()`; always write through `write()`.
 - `src/domain/` derived data: `lessons.ts` expands slots + exceptions + attendance into lessons,
   `fees.ts` turns plans, attendance and payments into balances (payments settle the oldest charge first).
 - `src/notifications/` local reminders (rolling window, rescheduled on any data change).
+- `src/backup/` Google Drive auto-backup: `engine.ts` (debounced after writes, on background, retried on
+  foreground/reconnect), `snapshot.ts` (`VACUUM INTO` + gzip, and restore into the live connection),
+  `retention.ts` (latest, 7 daily, 4 weekly, plus each other phone's newest), `drive.ts` (REST, appDataFolder
+  only). Backup bookkeeping lives in `meta` but is written outside `write()` so it never marks data dirty.
+  Database work that must not overlap a transaction goes through `exclusive()` in `core.ts`.
+- Google OAuth lives in the NexusDigitalLabs Cloud project "Mentto" (scope `drive.appdata`). Android needs one
+  OAuth client per signing key (debug, Play App Signing, and upload if sideloading release builds); no client
+  id is compiled in. iOS will need an iOS client and the google-signin config plugin with `iosUrlScheme`.
 - `modules/exact-alarms/` local Expo module: checks/opens Android's "Alarms & reminders" access, without
   which reminders can arrive up to an hour late.
 

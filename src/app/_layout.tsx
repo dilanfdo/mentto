@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 
+import { BackupSync } from '@/backup/BackupSync';
 import { SnackbarProvider } from '@/components/ui';
 import { DATABASE_NAME, migrateDatabase } from '@/db/schema';
 import { ReminderSync } from '@/notifications/ReminderSync';
@@ -23,6 +24,7 @@ export default function RootLayout() {
     <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDatabase}>
       <SnackbarProvider>
         <ReminderSync />
+        <BackupSync />
         <Stack
           screenOptions={{
             headerShown: false,
@@ -38,6 +40,7 @@ export default function RootLayout() {
           <Stack.Screen name="student/[id]/slot" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen name="student/[id]/plan" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen name="student/[id]/payment" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="backup" options={{ animation: 'slide_from_bottom' }} />
         </Stack>
         <StatusBar style="auto" />
       </SnackbarProvider>

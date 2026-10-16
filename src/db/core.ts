@@ -9,18 +9,32 @@ export type DB = SQLiteDatabase;
 export const newId = () => randomUUID();
 export const timestamp = () => new Date().toISOString();
 
+let queue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Runs `fn` once every earlier exclusive task has finished. The app shares one connection, so two
+ * transactions (or a transaction and a backup snapshot) must never overlap on it.
+ */
+export function exclusive<T>(fn: () => Promise<T>): Promise<T> {
+  const run = queue.then(fn, fn);
+  queue = run.catch(() => {});
+  return run;
+}
+
 /**
  * Runs a set of writes in one transaction, bumps the change counter the backup watches, then tells
  * every open screen to re-read.
  */
 export async function write(db: DB, fn: () => Promise<void>): Promise<void> {
-  await db.withTransactionAsync(async () => {
-    await fn();
-    await db.runAsync(
-      `INSERT INTO meta (key, value) VALUES ('change_seq', '1')
-       ON CONFLICT(key) DO UPDATE SET value = CAST(value AS INTEGER) + 1`,
-    );
-  });
+  await exclusive(() =>
+    db.withTransactionAsync(async () => {
+      await fn();
+      await db.runAsync(
+        `INSERT INTO meta (key, value) VALUES ('change_seq', '1')
+         ON CONFLICT(key) DO UPDATE SET value = CAST(value AS INTEGER) + 1`,
+      );
+    }),
+  );
   notifyDataChanged();
 }
 

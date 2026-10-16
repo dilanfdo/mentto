@@ -96,6 +96,9 @@ const MIGRATIONS: string[] = [
   `,
 ];
 
+/** The schema version a fully migrated database reports in PRAGMA user_version. */
+export const SCHEMA_VERSION = MIGRATIONS.length;
+
 export async function migrateDatabase(db: SQLiteDatabase): Promise<void> {
   // Wait for a lock rather than fail, e.g. while a previous connection is closing on reload.
   await db.execAsync('PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;');

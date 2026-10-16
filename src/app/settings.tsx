@@ -1,10 +1,14 @@
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { Linking, StyleSheet, Switch, View } from 'react-native';
 
+import { backupNow, disableBackup, getBackupState, retryBackup, type BackupState } from '@/backup/engine';
+import { formatAgo, useBackupState, useNow } from '@/backup/useBackup';
 import {
   Badge,
+  Button,
   Card,
   Divider,
   ListRow,
@@ -15,6 +19,8 @@ import {
   Text,
   TextField,
   useSnackbar,
+  type IconName,
+  type Tone,
 } from '@/components/ui';
 import { saveSettings, useSettings } from '@/db/settings';
 import { COMMON_CURRENCIES, currencyLabel } from '@/lib/money';
@@ -148,19 +154,7 @@ export default function SettingsScreen() {
         </Card>
       </Section>
 
-      <Section title="Backup">
-        <Card padded={false}>
-          <ListRow
-            leadingIcon="cloud-upload-outline"
-            title="Google Drive backup"
-            subtitle="Automatic backup to your own Drive"
-            trailing={<Badge label="Coming soon" />}
-          />
-        </Card>
-        <Text variant="caption" color="textTertiary" style={styles.note}>
-          Until then, Android includes Mentto in your phone’s own Google backup when it’s turned on.
-        </Text>
-      </Section>
+      <BackupSection />
 
       <Section title="About">
         <Card padded={false}>
@@ -216,7 +210,148 @@ export default function SettingsScreen() {
   );
 }
 
+type BackupLine = { icon: IconName; text: string; badge: { label: string; tone: Tone; icon: IconName } };
+
+function backupLine(b: BackupState, now: number): BackupLine {
+  const last = b.lastBackupAt ? `Backed up ${formatAgo(b.lastBackupAt, now)}` : 'Not backed up yet';
+  switch (b.phase) {
+    case 'running':
+      return { icon: 'cloud-sync-outline', text: 'Backing up…', badge: { label: 'Syncing', tone: 'primary', icon: 'sync' } };
+    case 'offline':
+      return { icon: 'cloud-off-outline', text: 'Waiting for internet', badge: { label: 'Offline', tone: 'warning', icon: 'wifi-off' } };
+    case 'error':
+      return {
+        icon: 'cloud-alert-outline',
+        text: 'Backup failed – tap to retry',
+        badge: { label: 'Failed', tone: 'danger', icon: 'alert-circle-outline' },
+      };
+    case 'conflict':
+      return {
+        icon: 'cloud-alert-outline',
+        text: 'Another phone has a newer backup – tap to review',
+        badge: { label: 'Check', tone: 'warning', icon: 'alert-outline' },
+      };
+    case 'signedOut':
+      return {
+        icon: 'cloud-lock-outline',
+        text: 'Signed out of Google – tap to sign in',
+        badge: { label: 'Paused', tone: 'warning', icon: 'pause' },
+      };
+    default:
+      return { icon: 'cloud-check-outline', text: last, badge: { label: 'On', tone: 'success', icon: 'check' } };
+  }
+}
+
+function BackupSection() {
+  const backup = useBackupState();
+  const now = useNow();
+  const snackbar = useSnackbar();
+  const [confirmOff, setConfirmOff] = useState(false);
+
+  if (!backup.ready) {
+    return (
+      <Section title="Backup">
+        <SkeletonList rows={1} />
+      </Section>
+    );
+  }
+
+  if (backup.phase === 'off') {
+    return (
+      <Section title="Backup">
+        <Card padded={false}>
+          <ListRow
+            leadingIcon="cloud-upload-outline"
+            title="Google Drive backup"
+            subtitle="Back up automatically to your own Drive"
+            trailing={<Badge label="Turn on" tone="primary" />}
+            onPress={() => router.push('/backup')}
+          />
+        </Card>
+        <Text variant="caption" color="textTertiary" style={styles.note}>
+          Android also includes Mentto in your phone’s own Google backup when it’s turned on.
+        </Text>
+      </Section>
+    );
+  }
+
+  const line = backupLine(backup, now);
+  const onStatus =
+    backup.phase === 'error' || backup.phase === 'offline'
+      ? retryBackup
+      : backup.phase === 'conflict' || backup.phase === 'signedOut'
+        ? () => router.push('/backup')
+        : undefined;
+
+  const backUp = async () => {
+    await backupNow({ force: true });
+    const after = getBackupState();
+    if (after.phase === 'idle') snackbar('Backed up', { icon: 'check-circle-outline' });
+  };
+
+  return (
+    <Section title="Backup">
+      <Card padded={false}>
+        <ListRow
+          leadingIcon={line.icon}
+          title={backup.account ?? 'Google Drive backup'}
+          subtitle={line.text}
+          trailing={<Badge {...line.badge} />}
+          onPress={onStatus}
+        />
+        <View style={styles.backupActions}>
+          <Button
+            label="Back up now"
+            icon="cloud-upload-outline"
+            variant="secondary"
+            size="small"
+            onPress={backUp}
+            loading={backup.phase === 'running'}
+            disabled={backup.phase === 'signedOut' || backup.phase === 'conflict'}
+          />
+          <Button label="Restore…" icon="backup-restore" variant="ghost" size="small" onPress={() => router.push('/backup')} />
+        </View>
+        <Divider inset={68} />
+        <ListRow leadingIcon="cloud-remove-outline" title="Turn off backup" destructive onPress={() => setConfirmOff(true)} />
+      </Card>
+      <Text variant="caption" color="textTertiary" style={styles.note}>
+        Backs up a minute after changes, into a private Mentto folder in your Drive.
+      </Text>
+
+      <Sheet visible={confirmOff} onClose={() => setConfirmOff(false)} title="Turn off backup?">
+        <View style={styles.sheetBody}>
+          <Text variant="body" color="textSecondary">
+            New changes won’t be backed up. Backups already in your Drive stay there, and you can restore them after signing in again.
+          </Text>
+          <Button
+            label="Turn off"
+            variant="danger"
+            onPress={async () => {
+              setConfirmOff(false);
+              await disableBackup();
+            }}
+            fullWidth
+          />
+          <Button label="Cancel" variant="ghost" onPress={() => setConfirmOff(false)} fullWidth />
+        </View>
+      </Sheet>
+    </Section>
+  );
+}
+
 const styles = StyleSheet.create({
+  backupActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  sheetBody: {
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
   content: {
     paddingTop: spacing.sm,
   },

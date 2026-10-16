@@ -64,7 +64,16 @@ export default function Onboarding() {
       actions={progress}
       footer={
         step === 0 ? (
-          <Button label="Get started" onPress={() => setStep(1)} fullWidth />
+          <View style={styles.footerStack}>
+            <Button label="Get started" onPress={() => setStep(1)} fullWidth />
+            <Button
+              label="Restore from Google Drive"
+              icon="backup-restore"
+              variant="ghost"
+              onPress={() => router.push({ pathname: '/backup', params: { from: 'onboarding' } })}
+              fullWidth
+            />
+          </View>
         ) : step === 1 ? (
           <Button label="Continue" onPress={() => setStep(2)} fullWidth />
         ) : (
