@@ -11,6 +11,9 @@ export type Settings = {
   feeReminders: boolean;
   /** The tutor dismissed the Today hint about exact reminder times. */
   exactHintDismissed: boolean;
+  /** Custom message templates (Pro); empty means the default. */
+  feeReminderTemplate: string;
+  receiptTemplate: string;
 };
 
 export function defaultCurrency(): string {
@@ -27,6 +30,8 @@ export async function getSettings(db: DB): Promise<Settings> {
     lessonReminderMin: Number(m.get('lesson_reminder_min') ?? 30),
     feeReminders: (m.get('fee_reminders') ?? '1') === '1',
     exactHintDismissed: m.get('exact_hint_dismissed') === '1',
+    feeReminderTemplate: m.get('tpl_fee_reminder') ?? '',
+    receiptTemplate: m.get('tpl_receipt') ?? '',
   };
 }
 
@@ -37,6 +42,8 @@ const KEYS: Record<keyof Settings, string> = {
   lessonReminderMin: 'lesson_reminder_min',
   feeReminders: 'fee_reminders',
   exactHintDismissed: 'exact_hint_dismissed',
+  feeReminderTemplate: 'tpl_fee_reminder',
+  receiptTemplate: 'tpl_receipt',
 };
 
 export async function saveSettings(db: DB, patch: Partial<Settings>): Promise<void> {

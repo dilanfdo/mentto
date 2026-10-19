@@ -11,6 +11,7 @@ import {
   Button,
   Card,
   Divider,
+  Icon,
   ListRow,
   Screen,
   Section,
@@ -22,7 +23,9 @@ import {
   type IconName,
   type Tone,
 } from '@/components/ui';
+import { openPaywall, usePro } from '@/billing/ProProvider';
 import { saveSettings, useSettings } from '@/db/settings';
+import { exportCsv } from '@/lib/documents';
 import { COMMON_CURRENCIES, currencyLabel } from '@/lib/money';
 import { requestPermission } from '@/notifications/reminders';
 import { useReminderAccess } from '@/notifications/useReminderAccess';
@@ -45,7 +48,8 @@ export default function SettingsScreen() {
   const { colors } = useTheme();
   const { data: settings } = useSettings();
   const [name, setName] = useState<string | null>(null);
-  const [sheet, setSheet] = useState<'currency' | 'lead' | null>(null);
+  const [sheet, setSheet] = useState<'currency' | 'lead' | 'export' | null>(null);
+  const { isPro } = usePro();
   const access = useReminderAccess();
   const permission = access.notifications ?? 'undetermined';
 
@@ -76,6 +80,26 @@ export default function SettingsScreen() {
 
   return (
     <Screen title="Settings" back contentStyle={styles.content}>
+      <Section title="Mentto Pro">
+        <Card padded={false}>
+          <ListRow
+            leading={
+              <View style={[styles.proMark, { backgroundColor: colors.primary }]}>
+                <Icon name="star-four-points" size={20} tint={colors.onPrimary} />
+              </View>
+            }
+            title={isPro ? 'You have Pro' : 'Upgrade to Pro'}
+            subtitle={
+              isPro
+                ? 'Thanks for supporting Mentto'
+                : 'Unlimited students, Drive backup, reports, PDF receipts'
+            }
+            chevron
+            onPress={() => router.push('/pro')}
+          />
+        </Card>
+      </Section>
+
       <Section title="You">
         <TextField
           label="Your name"
@@ -130,6 +154,15 @@ export default function SettingsScreen() {
             </>
           )}
           <ListRow
+            leadingIcon="message-text-outline"
+            title="Message templates"
+            subtitle="Your own words for reminders and receipts"
+            trailing={isPro ? undefined : <Badge label="Pro" tone="primary" icon="star-four-points" />}
+            chevron={isPro}
+            onPress={() => (isPro ? router.push('/templates') : openPaywall('templates'))}
+          />
+          <Divider inset={68} />
+          <ListRow
             leadingIcon="calendar-clock"
             title="Before each lesson"
             subtitle={lead.label}
@@ -155,6 +188,18 @@ export default function SettingsScreen() {
       </Section>
 
       <BackupSection />
+
+      <Section title="Your data">
+        <Card padded={false}>
+          <ListRow
+            leadingIcon="table-arrow-down"
+            title="Export to a spreadsheet"
+            subtitle="Students, payments or attendance as CSV"
+            chevron
+            onPress={() => setSheet('export')}
+          />
+        </Card>
+      </Section>
 
       <Section title="About">
         <Card padded={false}>
@@ -188,6 +233,27 @@ export default function SettingsScreen() {
             onPress={async () => {
               setSheet(null);
               await saveSettings(db, { currency: c });
+            }}
+          />
+        ))}
+      </Sheet>
+
+      <Sheet visible={sheet === 'export'} onClose={() => setSheet(null)} title="Export to a spreadsheet">
+        {(
+          [
+            ['students', 'account-group-outline', 'Students', 'Names, contacts and notes'],
+            ['payments', 'cash-multiple', 'Payments', 'Every payment with date and method'],
+            ['attendance', 'calendar-check-outline', 'Attendance', 'Every lesson marked attended or missed'],
+          ] as const
+        ).map(([kind, icon, title, sub]) => (
+          <ListRow
+            key={kind}
+            leadingIcon={icon}
+            title={title}
+            subtitle={sub}
+            onPress={() => {
+              setSheet(null);
+              void exportCsv(db, kind);
             }}
           />
         ))}
@@ -243,6 +309,7 @@ function backupLine(b: BackupState, now: number): BackupLine {
 }
 
 function BackupSection() {
+  const { isPro } = usePro();
   const backup = useBackupState();
   const now = useNow();
   const snackbar = useSnackbar();
@@ -264,8 +331,8 @@ function BackupSection() {
             leadingIcon="cloud-upload-outline"
             title="Google Drive backup"
             subtitle="Back up automatically to your own Drive"
-            trailing={<Badge label="Turn on" tone="primary" />}
-            onPress={() => router.push('/backup')}
+            trailing={isPro ? <Badge label="Turn on" tone="primary" /> : <Badge label="Pro" tone="primary" icon="star-four-points" />}
+            onPress={() => (isPro ? router.push('/backup') : openPaywall('backup'))}
           />
         </Card>
         <Text variant="caption" color="textTertiary" style={styles.note}>
@@ -275,9 +342,17 @@ function BackupSection() {
     );
   }
 
-  const line = backupLine(backup, now);
-  const onStatus =
-    backup.phase === 'error' || backup.phase === 'offline'
+  // Backup was set up, but Pro has ended: automatic backups pause; restoring still works.
+  const line: BackupLine = isPro
+    ? backupLine(backup, now)
+    : {
+        icon: 'cloud-off-outline',
+        text: 'Paused. Automatic backup is part of Pro.',
+        badge: { label: 'Pro', tone: 'primary', icon: 'star-four-points' },
+      };
+  const onStatus = !isPro
+    ? () => openPaywall('backup')
+    : backup.phase === 'error' || backup.phase === 'offline'
       ? retryBackup
       : backup.phase === 'conflict' || backup.phase === 'signedOut'
         ? () => router.push('/backup')
@@ -305,9 +380,9 @@ function BackupSection() {
             icon="cloud-upload-outline"
             variant="secondary"
             size="small"
-            onPress={backUp}
+            onPress={isPro ? backUp : () => openPaywall('backup')}
             loading={backup.phase === 'running'}
-            disabled={backup.phase === 'signedOut' || backup.phase === 'conflict'}
+            disabled={isPro && (backup.phase === 'signedOut' || backup.phase === 'conflict')}
           />
           <Button label="Restore…" icon="backup-restore" variant="ghost" size="small" onPress={() => router.push('/backup')} />
         </View>
@@ -357,6 +432,13 @@ const styles = StyleSheet.create({
   },
   note: {
     paddingHorizontal: spacing.xxs,
+  },
+  proMark: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footer: {
     paddingTop: spacing.md,

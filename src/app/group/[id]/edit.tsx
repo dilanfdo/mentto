@@ -2,6 +2,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Alert } from 'react-native';
 
+import { openPaywall, usePro } from '@/billing/ProProvider';
+import { countActive, overLimit } from '@/billing/limits';
 import { GroupForm } from '@/components/GroupForm';
 import { Button, Screen, SkeletonList, useSnackbar } from '@/components/ui';
 import { useQuery } from '@/db/core';
@@ -12,6 +14,7 @@ export default function EditGroup() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const db = useSQLiteContext();
   const snackbar = useSnackbar();
+  const { isPro } = usePro();
   const { data, loading } = useQuery(
     async (d) => ({ group: await getGroup(d, id), students: await listStudents(d) }),
     [id],
@@ -29,6 +32,10 @@ export default function EditGroup() {
   const archived = group.status === 'archived';
 
   const toggleArchive = async () => {
+    if (archived && overLimit((await countActive(db)).groups, 'groups', isPro)) {
+      openPaywall('groups');
+      return;
+    }
     await setGroupStatus(db, group.id, archived ? 'active' : 'archived');
     router.back();
     snackbar(archived ? `${group.name} is active again` : `${group.name} archived. Its lessons stop.`, {

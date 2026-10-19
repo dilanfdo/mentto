@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
   Avatar,
@@ -9,6 +9,7 @@ import {
   Divider,
   EmptyState,
   ErrorState,
+  Icon,
   ListRow,
   Screen,
   Section,
@@ -16,6 +17,7 @@ import {
   SkeletonList,
   Text,
 } from '@/components/ui';
+import { openPaywall, usePro } from '@/billing/ProProvider';
 import { useQuery, type DB } from '@/db/core';
 import { listPayments, type Payment } from '@/db/fees';
 import { getSettings } from '@/db/settings';
@@ -63,6 +65,7 @@ function groupByMonth(payments: Payment[]) {
 }
 
 export default function FeesScreen() {
+  const { isPro } = usePro();
   const [tab, setTab] = useState<'collect' | 'payments'>('collect');
   const { data, error, loading } = useQuery(loadFees, []);
   const t = today();
@@ -102,6 +105,18 @@ export default function FeesScreen() {
                 </Text>
               </View>
             </View>
+            <Divider />
+            <Pressable
+              onPress={() => (isPro ? router.push('/reports') : openPaywall('reports'))}
+              accessibilityRole="button"
+              style={styles.reportsLink}
+            >
+              <Icon name="chart-box-outline" size={20} color="primary" />
+              <Text variant="labelStrong" color="primary" style={styles.flex}>
+                Income reports
+              </Text>
+              {isPro ? <Icon name="chevron-right" size={20} color="primary" /> : <Badge label="Pro" tone="primary" icon="star-four-points" />}
+            </Pressable>
           </Card>
 
           <SegmentedControl
@@ -243,6 +258,15 @@ const styles = StyleSheet.create({
   summaryCell: {
     flex: 1,
     gap: 2,
+  },
+  reportsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 40,
+  },
+  flex: {
+    flex: 1,
   },
   tabBody: {
     marginTop: spacing.xs,

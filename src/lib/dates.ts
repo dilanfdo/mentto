@@ -138,6 +138,11 @@ export function formatRelativeDayInline(date: ISODate, reference: ISODate = toda
   return ['Today', 'Tomorrow', 'Yesterday'].includes(day) ? day.toLowerCase() : day;
 }
 
+/** Always with the year, for documents that are kept: "3 Oct 2026". */
+export function formatFullDate(date: ISODate): string {
+  return dayMonthYear.format(parseDate(date));
+}
+
 export function formatShortDate(date: ISODate, reference: ISODate = today()): string {
   const sameYear = date.slice(0, 4) === reference.slice(0, 4);
   return (sameYear ? dayMonth : dayMonthYear).format(parseDate(date));

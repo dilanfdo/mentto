@@ -3,13 +3,20 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
+import { usePro } from '@/billing/ProProvider';
 import { subscribeToDataChanges } from '@/lib/events';
 
-import { backupNow, retryBackup, scheduleBackup, startBackup } from './engine';
+import { backupNow, retryBackup, scheduleBackup, setBackupAllowed, startBackup } from './engine';
 
 /** Runs the Drive auto-backup: after edits settle, when the app is left, and when it's back online. */
 export function BackupSync() {
   const db = useSQLiteContext();
+  const { isPro, ready } = usePro();
+
+  // Automatic backup runs only with Pro. Restoring stays free, so this never touches existing backups.
+  useEffect(() => {
+    if (ready) setBackupAllowed(isPro);
+  }, [isPro, ready]);
 
   useEffect(() => {
     startBackup(db).catch((e) => console.warn('Could not start backup', e));

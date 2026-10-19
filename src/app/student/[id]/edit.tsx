@@ -2,6 +2,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Alert } from 'react-native';
 
+import { openPaywall, usePro } from '@/billing/ProProvider';
+import { countActive, overLimit } from '@/billing/limits';
 import { StudentForm } from '@/components/StudentForm';
 import { Button, Screen, SkeletonList, useSnackbar } from '@/components/ui';
 import { useQuery } from '@/db/core';
@@ -11,6 +13,7 @@ export default function EditStudent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const db = useSQLiteContext();
   const snackbar = useSnackbar();
+  const { isPro } = usePro();
   const { data: student, loading } = useQuery((d) => getStudent(d, id), [id]);
 
   if (loading && !student) {
@@ -25,6 +28,10 @@ export default function EditStudent() {
   const archived = student.status === 'archived';
 
   const toggleArchive = async () => {
+    if (archived && overLimit((await countActive(db)).students, 'students', isPro)) {
+      openPaywall('students');
+      return;
+    }
     await setStudentStatus(db, student.id, archived ? 'active' : 'archived');
     router.back();
     snackbar(

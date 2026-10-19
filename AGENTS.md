@@ -39,6 +39,15 @@ attendance, payments, reminders). v1 is Android-first and tutor-only; there is n
 - Google OAuth lives in the NexusDigitalLabs Cloud project "Mentto" (scope `drive.appdata`). Android needs one
   OAuth client per signing key (debug, Play App Signing, and upload if sideloading release builds); no client
   id is compiled in. iOS will need an iOS client and the google-signin config plugin with `iosUrlScheme`.
+- `src/billing/` Mentto Pro. `purchases.ts` talks to RevenueCat (entitlement `pro`; offering packages
+  $rc_annual, $rc_monthly, $rc_lifetime) when `EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID` is set; development
+  builds without a key simulate purchases, release builds without a key never unlock Pro. `ProProvider`
+  exposes `usePro()` and `openPaywall(feature)`; the Pro screen is `src/app/pro.tsx`.
+- Free vs Pro: free covers `FREE_LIMITS` (8 active students, 1 active group; enforced in `student/new`,
+  `group/new` and when restoring archived ones). Pro adds unlimited students/groups, automatic Drive backup
+  (restoring is always free; backups pause if Pro ends), income reports (`reports.tsx`), PDF receipts and
+  statements (`src/lib/documents.ts`, expo-print) and message templates (`templates.tsx`). CSV export of
+  students, payments and attendance is free. Never lock or delete existing data when Pro ends.
 - `modules/exact-alarms/` local Expo module: checks/opens Android's "Alarms & reminders" access, without
   which reminders can arrive up to an hour late.
 

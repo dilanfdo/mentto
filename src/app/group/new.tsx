@@ -1,6 +1,8 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 
+import { usePro } from '@/billing/ProProvider';
+import { countActive, overLimit } from '@/billing/limits';
 import { GroupForm } from '@/components/GroupForm';
 import { Screen, SkeletonList, useSnackbar } from '@/components/ui';
 import { useQuery } from '@/db/core';
@@ -10,14 +12,20 @@ import { listStudents } from '@/db/students';
 export default function NewGroup() {
   const db = useSQLiteContext();
   const snackbar = useSnackbar();
+  const { isPro, ready } = usePro();
   const { data: students } = useQuery((d) => listStudents(d), []);
+  const { data: counts } = useQuery(countActive, []);
 
-  if (!students) {
+  if (!students || !counts || !ready) {
     return (
       <Screen title="New group" back backIcon="close">
         <SkeletonList rows={4} />
       </Screen>
     );
+  }
+
+  if (overLimit(counts.groups, 'groups', isPro)) {
+    return <Redirect href={{ pathname: '/pro', params: { feature: 'groups' } }} />;
   }
 
   return (

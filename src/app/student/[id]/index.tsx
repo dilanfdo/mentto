@@ -19,20 +19,24 @@ import {
   ListRow,
   Screen,
   Section,
+  Sheet,
   SkeletonList,
   Text,
   useSnackbar,
   type IconName,
 } from '@/components/ui';
 import { useQuery, type DB } from '@/db/core';
-import { deletePayment, listPayments } from '@/db/fees';
+import { deletePayment, listPayments, type Payment } from '@/db/fees';
 import { listStudentGroups } from '@/db/groups';
 import { listOwnerSchedules } from '@/db/schedules';
 import { getSettings } from '@/db/settings';
 import { getStudent } from '@/db/students';
 import { loadFeeStatus } from '@/domain/fees';
 import { loadLessons, loadNextLesson, type Lesson } from '@/domain/lessons';
+import { openPaywall, usePro } from '@/billing/ProProvider';
 import { callPhone, sendEmail, sendSms, shareText } from '@/lib/contact';
+import { shareReceiptPdf, shareStatementPdf } from '@/lib/documents';
+import { DEFAULT_TEMPLATES, fillTemplate } from '@/lib/templates';
 import {
   addDays,
   formatRelativeDay,
@@ -112,6 +116,8 @@ export default function StudentPage() {
   const snackbar = useSnackbar();
   const { colors } = useTheme();
   const [selected, setSelected] = useState<Lesson | null>(null);
+  const [paymentMenu, setPaymentMenu] = useState<Payment | null>(null);
+  const { isPro } = usePro();
   const { data, loading } = useQuery((d) => loadStudentPage(d, id), [id]);
 
   if (loading && !data) {
@@ -146,9 +152,21 @@ export default function StudentPage() {
         : fee.nextDue
           ? `will be due on ${formatShortDate(fee.nextDue.date)}`
           : 'is due';
-    const sign = settings.tutorName ? `\n– ${settings.tutorName}` : '';
-    return `Hi ${firstName}, a friendly reminder that the lesson fee of ${amount} ${when}. Thank you!${sign}`;
+    const template = (isPro && settings.feeReminderTemplate) || DEFAULT_TEMPLATES.feeReminder;
+    return fillTemplate(template, { name: firstName, amount, due: when, tutor: settings.tutorName });
   };
+
+  const receiptMessage = (p: Payment) =>
+    fillTemplate((isPro && settings.receiptTemplate) || DEFAULT_TEMPLATES.receipt, {
+      name: student.name,
+      amount: formatMoney(p.amount, p.currency),
+      date: formatShortDate(p.paidOn),
+      method: p.method ? METHOD_LABELS[p.method] : '',
+      tutor: settings.tutorName,
+    });
+
+  const sendStatement = () =>
+    isPro ? shareStatementPdf(db, student, fee, today().slice(0, 7), settings.tutorName) : openPaywall('pdf');
 
   const confirmDeletePayment = (paymentId: string, amount: number) => {
     Alert.alert('Delete this payment?', `${formatMoney(amount, fee.currency)} will be added back to the balance.`, [
@@ -231,7 +249,7 @@ export default function StudentPage() {
           </View>
         </View>
 
-        <Section title="Fees">
+        <Section title="Fees" action={hasFees ? { label: 'Statement', onPress: sendStatement } : undefined}>
           {!hasFees ? (
             <Card>
               <View style={styles.cardStack}>
@@ -345,9 +363,9 @@ export default function StudentPage() {
                     subtitle={[formatShortDate(p.paidOn), p.method ? METHOD_LABELS[p.method] : null, p.note]
                       .filter(Boolean)
                       .join(' · ')}
-                    onLongPress={() => confirmDeletePayment(p.id, p.amount)}
-                    onPress={() => confirmDeletePayment(p.id, p.amount)}
-                    accessibilityHint="Opens an option to delete this payment"
+                    onLongPress={() => setPaymentMenu(p)}
+                    onPress={() => setPaymentMenu(p)}
+                    accessibilityHint="Send a receipt or delete this payment"
                   />
                 </View>
               ))}
@@ -387,6 +405,44 @@ export default function StudentPage() {
       </Animated.View>
 
       <LessonSheet lesson={selected} onClose={() => setSelected(null)} ownerId={id} />
+      <Sheet
+        visible={paymentMenu !== null}
+        onClose={() => setPaymentMenu(null)}
+        title={paymentMenu ? formatMoney(paymentMenu.amount, paymentMenu.currency) : undefined}
+        subtitle={paymentMenu ? `Paid ${formatShortDate(paymentMenu.paidOn)}` : undefined}
+      >
+        <ListRow
+          leadingIcon="file-pdf-box"
+          title="PDF receipt"
+          trailing={isPro ? undefined : <Badge label="Pro" tone="primary" icon="star-four-points" />}
+          onPress={() => {
+            const p = paymentMenu!;
+            setPaymentMenu(null);
+            if (isPro) void shareReceiptPdf(student, p, settings.tutorName);
+            else openPaywall('pdf');
+          }}
+        />
+        <ListRow
+          leadingIcon="message-text-outline"
+          title="Send as a message"
+          subtitle="WhatsApp, SMS or email"
+          onPress={() => {
+            const p = paymentMenu!;
+            setPaymentMenu(null);
+            void shareText(receiptMessage(p));
+          }}
+        />
+        <ListRow
+          leadingIcon="delete-outline"
+          title="Delete payment"
+          destructive
+          onPress={() => {
+            const p = paymentMenu!;
+            setPaymentMenu(null);
+            confirmDeletePayment(p.id, p.amount);
+          }}
+        />
+      </Sheet>
       <View style={[styles.bottomSpace, { backgroundColor: colors.background }]} />
     </Screen>
   );

@@ -19,7 +19,10 @@ import { createPayment, type PaymentMethod } from '@/db/fees';
 import { getSettings } from '@/db/settings';
 import { getStudent, type Student } from '@/db/students';
 import { loadFeeStatus, type FeeStatus } from '@/domain/fees';
+import { usePro } from '@/billing/ProProvider';
 import { shareText } from '@/lib/contact';
+import { shareReceiptPdf } from '@/lib/documents';
+import { DEFAULT_TEMPLATES, fillTemplate } from '@/lib/templates';
 import { formatShortDate, today } from '@/lib/dates';
 import { currencySymbol, formatMoney, parseMoney, toMoneyInput } from '@/lib/money';
 import { METHOD_LABELS } from '@/lib/summaries';
@@ -54,6 +57,7 @@ type BodyProps = { id: string; student: Student; fee: FeeStatus; tutorName: stri
 function PaymentBody({ id, student, fee, tutorName }: BodyProps) {
   const db = useSQLiteContext();
   const snackbar = useSnackbar();
+  const { isPro } = usePro();
   const currency = fee.currency;
   const suggested = fee.balance > 0 ? fee.balance : (fee.nextDue?.amount ?? fee.plan?.amount ?? 0);
 
@@ -73,15 +77,24 @@ function PaymentBody({ id, student, fee, tutorName }: BodyProps) {
     }
     await createPayment(db, id, { amount: parsed, currency, paidOn, method, note });
     router.back();
-    const receipt =
-      `Payment received – thank you!\n\n` +
-      `Student: ${student.name}\nAmount: ${formatMoney(parsed, currency)}\nDate: ${formatShortDate(paidOn)}\n` +
-      `Method: ${METHOD_LABELS[method]}` +
-      (note.trim() ? `\nNote: ${note.trim()}` : '') +
-      (tutorName ? `\n\n– ${tutorName}` : '');
+    // Pro sends a PDF receipt; the free version sends it as a message.
+    const sendReceipt = () => {
+      if (isPro) {
+        const payment = { id: '', studentId: id, amount: parsed, currency, paidOn, method, note: note.trim() || null };
+        return shareReceiptPdf(student, payment, tutorName);
+      }
+      const text = fillTemplate(DEFAULT_TEMPLATES.receipt, {
+        name: student.name,
+        amount: formatMoney(parsed, currency),
+        date: formatShortDate(paidOn),
+        method: METHOD_LABELS[method],
+        tutor: tutorName,
+      });
+      return shareText(note.trim() ? `${text}\nNote: ${note.trim()}` : text);
+    };
     snackbar(`${formatMoney(parsed, currency)} from ${student.name.split(' ')[0]} recorded`, {
       icon: 'check-circle-outline',
-      action: { label: 'Send receipt', onPress: () => shareText(receipt) },
+      action: { label: 'Send receipt', onPress: sendReceipt },
     });
   };
 

@@ -159,7 +159,16 @@ export async function startBackup(database: DB): Promise<void> {
   await backupNow();
 }
 
-const enabled = () => db !== null && state.phase !== 'off' && state.phase !== 'signedOut';
+/** Automatic backup is a Pro feature; restoring never is. Set by BackupSync from the entitlement. */
+let allowed = false;
+
+export function setBackupAllowed(value: boolean): void {
+  const was = allowed;
+  allowed = value;
+  if (value && !was) void backupNow();
+}
+
+const enabled = () => allowed && db !== null && state.phase !== 'off' && state.phase !== 'signedOut';
 
 /** Call after any data change: backs up once edits have been quiet for a while. */
 export function scheduleBackup(): void {
