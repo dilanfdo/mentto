@@ -93,7 +93,8 @@ export default function TodayScreen() {
   }
 
   const name = data?.settings.tutorName.split(' ')[0];
-  const done = data?.lessons.filter((l) => l.status === 'attended').length ?? 0;
+  // Marked either way (came or missed) means the lesson is behind you.
+  const done = data?.lessons.filter((l) => l.status === 'attended' || l.status === 'missed').length ?? 0;
   const active = data?.lessons.filter((l) => l.status !== 'cancelled').length ?? 0;
   const owingTotal = data?.owing.reduce((sum, s) => sum + s.balance, 0) ?? 0;
   const currency = data?.settings.currency ?? 'USD';

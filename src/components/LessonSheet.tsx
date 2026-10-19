@@ -300,6 +300,9 @@ const styles = StyleSheet.create({
   },
   mark: {
     minHeight: 36,
+    // Fixed width so the buttons line up in columns whether or not they show a check.
+    width: 92,
+    justifyContent: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,

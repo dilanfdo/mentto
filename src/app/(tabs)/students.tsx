@@ -29,15 +29,23 @@ import { radii, spacing, useTheme } from '@/theme';
 
 async function loadStudents(db: DB, status: StudentStatus) {
   const settings = await getSettings(db);
-  const [students, schedules, statuses, counts] = await Promise.all([
+  const [students, schedules, statuses, counts, groups] = await Promise.all([
     listStudents(db, status),
     listActiveSchedules(db),
     loadAllFeeStatuses(db, settings.currency),
     countStudents(db),
+    listGroups(db),
   ]);
+  // Students who only come to a group class show that class rather than "no slot".
+  const groupLine = (studentId: string) => {
+    const g = groups.find((x) => x.members.some((m) => m.id === studentId));
+    if (!g) return null;
+    const when = summarizeSlots(schedules.filter((x) => x.groupId === g.id));
+    return when ? `${g.name} · ${when}` : g.name;
+  };
   return students.map((s) => ({
     student: s,
-    slots: summarizeSlots(schedules.filter((x) => x.studentId === s.id)),
+    slots: summarizeSlots(schedules.filter((x) => x.studentId === s.id)) ?? groupLine(s.id),
     fee: statuses.get(s.id) ?? null,
     counts,
   }));
