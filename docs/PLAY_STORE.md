@@ -100,7 +100,7 @@ Play Console → **Home → Create app** (signed in as the NexusDigitalLabs deve
 
 | Field | Value |
 |---|---|
-| App name | `Mentto – Tutor & Class Planner` (30 characters max; can change later) |
+| App name | `Mentto: Tutor Lessons & Fees` (28 of 30 characters; can change any time without a new build) |
 | Default language | English (United States) — add English (UK) later if you like |
 | App or game | **App** |
 | Free or paid | **Free** (in-app purchases are still allowed; a free app can never become paid) |
@@ -331,7 +331,7 @@ Install from the **internal testing** link on a phone signed in with a **license
 
 | Field | Value |
 |---|---|
-| App name | `Mentto – Tutor & Class Planner` |
+| App name | `Mentto: Tutor Lessons & Fees` |
 | Short description (80) | `Students, lessons, attendance and fees for tutors and coaches, in one place.` |
 | App icon | `store/icon-512.png` |
 | Feature graphic | `store/feature-graphic-1024x500.png` |
