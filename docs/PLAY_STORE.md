@@ -119,26 +119,39 @@ Then, before any upload:
 
 ---
 
-## Part 3 — RevenueCat project and API key [you]
+## Part 3 — RevenueCat project and API key [you] ✅ done (2026-10-19)
 
-In RevenueCat (NexusDigitalLabs account, the one Odova uses — not a personal one):
+- RevenueCat project **Mentto** (platform: React Native) with a **Google Play** app configuration
+  `Mentto (Android)`, package `app.nexusdigitallabs.mentto`. Service account JSON comes in Part 6.
+- The onboarding wizard's suggested entitlement and placeholder products were **skipped**; the
+  entitlement (`pro`), products and offering are created in Part 6 from the real Play products.
+- Ignore the **Test Store** key (`test_…`); Mentto uses the Google Play public key (`goog_…`).
 
-1. **Projects → Create new project** → name `Mentto`.
-2. **Apps & providers → Add app → Google Play Store** → app name `Mentto (Android)`, package name
-   `app.nexusdigitallabs.mentto`. Leave the service-account credentials for Part 6.
-3. **API keys**: copy the **public Android SDK key** (starts with `goog_`). It's safe to ship in the app
-   but keep it out of git. Create `.env.local` in the repo root (already git-ignored):
+### Debug vs production setup (same pattern as Odova and Huffle)
 
-   ```bash
-   EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID=goog_xxxxxxxxxxxxxxxxxxxxxxxx
-   ```
+`src/lib/config.ts` reads `EXPO_PUBLIC_*` variables with safe defaults; `.env.example` documents them;
+`.env.local` (git-ignored) holds local overrides.
 
-With the key in place, release builds use real Google Play billing. Without it they show Pro as
-unavailable (they never unlock it for free).
+| | Debug build (`npm run android`) | Release build (`gradlew bundleRelease`) |
+|---|---|---|
+| Pro purchases | Simulated (no store, nothing charged) | Google Play through RevenueCat |
+| RevenueCat key | Built-in default (`goog_…`, public) | Built-in default |
+| Signing | Debug key | Upload key from `~/.mentto-signing` |
+
+To try real Google Play billing from a debug build, set `EXPO_PUBLIC_BILLING_MODE=store` in
+`.env.local` (the app must already be on the Internal testing track, and the phone signed in with a
+license tester account). Never put a RevenueCat secret key (`sk_…`) in any `EXPO_PUBLIC_` variable.
 
 ---
 
-## Part 4 — Build and upload the first AAB [you + repo]
+## Part 4 — Build and upload the first AAB [you + repo] (build ✅ 2026-10-19; upload: you)
+
+Built and verified 1.0.0 (code 1): signed with the upload key (SHA-1 `0D:69:…:9F:31`), no
+`AD_ID`/`SYSTEM_ALERT_WINDOW`/storage permissions, RevenueCat key present, real-billing mode confirmed on
+an emulator. Files: `~/Desktop/Mentto-Releases/1.0.0-code1/` (`mentto-1.0.0-code1.aab` to upload, the
+APK for sideloading, `SHA256SUMS.txt`, `release-notes.txt`).
+
+Build steps, for every later release:
 
 ```bash
 cd mentto

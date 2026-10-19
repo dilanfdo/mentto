@@ -21,6 +21,10 @@ npm run typecheck
 npm run lint
 ```
 
-Native modules (SQLite, notifications, Google Sign-In later) need a development build, not Expo Go.
+Native modules (SQLite, notifications, Google Sign-In, billing) need a development build, not Expo Go.
+
+Configuration lives in `src/lib/config.ts`; copy `.env.example` to `.env.local` for overrides. Debug
+builds simulate Pro purchases; release builds use Google Play billing through RevenueCat. Releasing to
+Google Play: `docs/PLAY_STORE.md`.
 
 App ID: `app.nexusdigitallabs.mentto`

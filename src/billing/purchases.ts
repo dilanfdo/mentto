@@ -1,8 +1,8 @@
 // Mentto Pro: entitlement state and the purchase flow.
 //
-// Real billing goes through RevenueCat (Google Play / App Store) when an API key is configured.
-// Without a key, development builds fall back to a local simulation so the paywall can be tested;
-// release builds without a key never unlock Pro and show the plans as unavailable.
+// Release builds go through RevenueCat (Google Play, later the App Store). Debug builds simulate
+// purchases unless EXPO_PUBLIC_BILLING_MODE=store (see src/lib/config.ts). If a store build has
+// no key for its platform, Pro shows as unavailable; it is never unlocked for free.
 //
 // To go live:
 // 1. In Play Console create a subscription "mentto_pro" with two base plans, monthly and yearly
@@ -10,22 +10,23 @@
 // 2. In RevenueCat (NexusDigitalLabs account) create the project, connect Play, create the entitlement
 //    `pro` and attach all three products, and make a "default" offering with the $rc_monthly,
 //    $rc_annual and $rc_lifetime packages.
-// 3. Set EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID (and _IOS later) when building. Nothing else changes.
+// 3. The Android public key is the default in src/lib/config.ts (override with
+//    EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID). Add the iOS key there when iOS ships.
 import type { CustomerInfo, PurchasesPackage } from 'react-native-purchases';
 import { Platform } from 'react-native';
 
 import type { DB } from '@/db/core';
 
-export const ENTITLEMENT_ID = 'pro';
+import { BILLING_MODE, REVENUECAT_API_KEY_ANDROID, REVENUECAT_API_KEY_IOS, REVENUECAT_ENTITLEMENT_ID } from '@/lib/config';
 
-const API_KEY =
-  (Platform.OS === 'ios'
-    ? process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS
-    : process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID) ?? '';
+export const ENTITLEMENT_ID = REVENUECAT_ENTITLEMENT_ID;
+
+const API_KEY = Platform.OS === 'ios' ? REVENUECAT_API_KEY_IOS : REVENUECAT_API_KEY_ANDROID;
 
 export type BillingMode = 'store' | 'simulated' | 'unavailable';
 
-export const billingMode: BillingMode = API_KEY ? 'store' : __DEV__ ? 'simulated' : 'unavailable';
+export const billingMode: BillingMode =
+  BILLING_MODE === 'simulated' ? 'simulated' : API_KEY ? 'store' : 'unavailable';
 
 export type PlanKind = 'yearly' | 'monthly' | 'lifetime';
 
