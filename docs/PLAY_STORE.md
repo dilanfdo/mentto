@@ -199,7 +199,7 @@ App signing key certificate → SHA-1**. You need it in Part 7.
 
 ---
 
-## Part 5 — Create the Pro products in Play [you]
+## Part 5 — Create the Pro products in Play [you] ✅ done (2026-10-19)
 
 These IDs must match exactly; RevenueCat and the app look for them.
 
@@ -213,14 +213,14 @@ These IDs must match exactly; RevenueCat and the app look for them.
 
 **Add base plan → Auto-renewing:**
 
-| Base plan ID | Billing period | Grace period | Resubscribe | Price (set these, then "Update other prices" from them) |
+| Base plan ID | Billing period | Grace period | Resubscribe | Price (set in USD; Google converted the rest, LKR included) |
 |---|---|---|---|---|
-| `monthly` | 1 month | 7 days | Allow | Sri Lanka LKR 490 · United States USD 3.99 |
-| `yearly` | 1 year | 14 days | Allow | Sri Lanka LKR 3,990 · United States USD 29.99 |
+| `monthly` | 1 month | 7 days | Allow | USD 3.99 |
+| `yearly` | 1 year | 14 days | Allow | USD 29.99 |
 
-For each base plan, after setting the two anchor prices, use **Set prices → Update all prices** so other
-countries get local equivalents, then review a few (India, UK, Australia) and round them to friendly
-numbers. **Activate** each base plan.
+Every other country (Sri Lanka included) uses Google's local conversion of the USD price. Prices can be
+changed later per country without touching the app; existing subscribers keep their price unless you
+move them. **Activate** each base plan.
 
 **Add offer** on each base plan (the 7-day free trial):
 
@@ -235,7 +235,8 @@ numbers. **Activate** each base plan.
 
 - Product ID: `mentto_pro_lifetime` · Name: `Mentto Pro (lifetime)`
 - Description: `All Pro features, paid once.`
-- Price: Sri Lanka LKR 9,900 · United States USD 59.99 → update other prices → **Activate**
+- Purchase option ID: `lifetime` · Purchase type: **Buy**
+- Price: USD 59.99, other countries converted by Google → **Activate**
 - Tax category: **Digital app sales** (as for Odova)
 
 ---
