@@ -22,7 +22,13 @@
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM"
       ],
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "versionCode": 1,
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -62,12 +68,24 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-sharing"
+      "expo-sharing",
+      "./plugins/withReleaseSigning",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ],
+      "./plugins/withAccentColor"
     ],
     "scheme": "mentto",
     "experiments": {
       "typedRoutes": true
     },
-    "backgroundColor": "#F6F6FA"
+    "backgroundColor": "#F6F6FA",
+    "primaryColor": "#4F46E5"
   }
 }

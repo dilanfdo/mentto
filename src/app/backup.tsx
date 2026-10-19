@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 
 import { SignInCancelled } from '@/backup/account';
 import type { DriveBackup } from '@/backup/drive';
@@ -22,6 +22,7 @@ import {
   Text,
   useSnackbar,
 } from '@/components/ui';
+import { PRIVACY_POLICY } from '@/lib/links';
 import { spacing } from '@/theme';
 
 type List = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; backups: DriveBackup[] };
@@ -109,6 +110,15 @@ export default function BackupScreen() {
             {signInError}
           </Text>
         )}
+        <Text
+          variant="labelStrong"
+          color="primary"
+          align="center"
+          accessibilityRole="link"
+          onPress={() => Linking.openURL(PRIVACY_POLICY)}
+        >
+          Privacy policy
+        </Text>
       </Screen>
     );
   }

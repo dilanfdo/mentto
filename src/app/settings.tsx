@@ -26,6 +26,7 @@ import {
 import { openPaywall, usePro } from '@/billing/ProProvider';
 import { saveSettings, useSettings } from '@/db/settings';
 import { exportCsv } from '@/lib/documents';
+import { PRIVACY_POLICY, WEBSITE } from '@/lib/links';
 import { COMMON_CURRENCIES, currencyLabel } from '@/lib/money';
 import { requestPermission } from '@/notifications/reminders';
 import { useReminderAccess } from '@/notifications/useReminderAccess';
@@ -40,7 +41,6 @@ const LEAD_TIMES = [
   { value: 120, label: '2 hours before' },
 ];
 
-const WEBSITE = 'https://nexusdigitallabs.dev/mentto/';
 
 export default function SettingsScreen() {
   const db = useSQLiteContext();
@@ -209,6 +209,14 @@ export default function SettingsScreen() {
             subtitle="nexusdigitallabs.dev/mentto"
             chevron
             onPress={() => Linking.openURL(WEBSITE)}
+          />
+          <Divider inset={68} />
+          <ListRow
+            leadingIcon="shield-lock-outline"
+            title="Privacy policy"
+            subtitle="How Mentto handles your data"
+            chevron
+            onPress={() => Linking.openURL(PRIVACY_POLICY)}
           />
           <Divider inset={68} />
           <ListRow

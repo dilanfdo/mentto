@@ -54,9 +54,9 @@ PANELS = [
     dict(file="07-students", src="students", title="One-to-one<br>or whole classes",
          sub="Students and groups, side by side.", bg=(INDIGO_DK, INDIGO), tilt=-3,
          floats=[("🎤", 70, 905, 640, 10), ("👥", 64, 10, 1100, -10)]),
-    dict(file="08-reminders-backup", src="settings", title="Reminders and<br>backup, built in",
-         sub="Never miss a lesson. Never lose a record.", bg=(INDIGO_LT, INDIGO), tilt=3,
-         floats=[("🔔", 74, 905, 600, 12), ("☁️", 66, 10, 1100, -10)]),
+    dict(file="08-reminders", src="settings", title="Reminders<br>your way",
+         sub="Before each lesson, and when fees fall due.", bg=(INDIGO_LT, INDIGO), tilt=3,
+         floats=[("🔔", 74, 905, 600, 12), ("⏰", 66, 10, 1100, -10)]),
 ]
 
 FONT = "@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');"

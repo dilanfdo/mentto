@@ -25,25 +25,26 @@ personal or letsbridge account for any of these.
 
 ---
 
-## Part 0 — Release prep in the repo [repo]
+## Part 0 — Release prep in the repo [repo] ✅ done (2026-10-19)
 
-Things the app needs before its first upload. None of these change how the app works.
-
-1. **Release signing.** Add `plugins/withReleaseSigning.js` (same as Huffle's, reading
-   `~/.mentto-signing/keystore.properties`) and list it in `app.json` → `plugins`. Without it the release
-   build is signed with the debug key and Play rejects it.
-2. **Version numbers.** `app.json` → `expo.version` = `1.0.0`, and add `expo.android.versionCode` = `1`.
-   Every upload needs a higher `versionCode` than the last, even a rebuild.
-3. **Smaller, harder-to-read release code.** `npx expo install expo-build-properties` and add it to
-   `plugins` with `android.enableMinifyInReleaseBuilds` and `enableShrinkResourcesInReleaseBuilds`
-   (Play's pre-launch report flags apps without it, as it did for Huffle).
-4. **Privacy policy page** at `https://nexusdigitallabs.dev/mentto/privacy-policy/` (website repo, like
-   Huffle's), plus a "Privacy policy" link in Settings → About. Play and Google's OAuth consent screen
-   both require the URL; Play also requires the link inside the app.
-5. **Store screenshot 8** says "Reminders and backup, built in", but Drive backup is Pro. Change the
-   headline in `store/build_screenshots.py` (for example "Reminders that keep you on time") and re-run it.
-6. **Checks:** `npx tsc --noEmit`, `npx expo lint`, `npm test`, `npx expo-doctor` (apply the two pending
-   patch updates with `npx expo install --fix`).
+- **Release signing:** `plugins/withReleaseSigning.js` reads the upload key from
+  `~/.mentto-signing/keystore.properties` (or `$MENTTO_SIGNING_FILE`). Until Part 1 is done, release
+  builds fall back to the debug key — fine for testing, not uploadable.
+- **Version:** `app.json` → `expo.version` `1.0.0`, `expo.android.versionCode` `1`. Bump `versionCode`
+  for every upload.
+- **Minified release:** `expo-build-properties` with R8 minify and resource shrinking. Verified: the
+  minified release runs normally on an emulator (data, Pro screen, PDFs, reminders).
+- **Permissions:** `android.blockedPermissions` removes `SYSTEM_ALERT_WINDOW` (Expo's template adds it for
+  the development menu overlay) and the legacy storage permissions; none are used. Reminders don't need
+  `SYSTEM_ALERT_WINDOW`: they use `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM` and
+  `RECEIVE_BOOT_COMPLETED`. Verified on the minified release: a lesson reminder posted 6 seconds after
+  its time, with sound.
+- **Native dialog colours:** `plugins/withAccentColor.js` sets the Android accent to Mentto's indigo, so
+  the date and time pickers no longer show Android's default teal.
+- **Privacy policy:** `https://nexusdigitallabs.dev/mentto/privacy-policy/` (website repo), linked from
+  Settings → About and from the Google Drive sign-in screen.
+- **Store screenshot 8** is now "Reminders your way" (backup is Pro).
+- **Checks:** `npx tsc --noEmit`, `npx expo lint`, `npm test` (27 tests), `npx expo-doctor` (21/21).
 
 ---
 
@@ -146,7 +147,7 @@ APK=android/app/build/outputs/apk/release/app-release.apk
 AAB=android/app/build/outputs/bundle/release/app-release.aab
 $BT/aapt2 dump badging $APK | grep -E "^package|application-debuggable"   # versionCode 1; no debuggable line
 keytool -printcert -jarfile $AAB | grep SHA1                                # must be the upload key from Part 1
-$BT/aapt2 dump permissions $APK | grep -iE "AD_ID|SYSTEM_ALERT_WINDOW"      # must print nothing
+$BT/aapt2 dump permissions $APK | grep -iE "AD_ID|SYSTEM_ALERT_WINDOW|EXTERNAL_STORAGE"   # must print nothing
 unzip -p $APK assets/index.android.bundle | grep -a -c "goog_"              # must be 1 (RevenueCat key baked in)
 ```
 

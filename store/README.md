@@ -8,7 +8,7 @@ store/
   icon-512.png                    Play Console icon (512×512)
   feature-graphic-1024x500.png    Play feature graphic
   source/                         raw 1080×2424 emulator captures of the app with demo data
-  screenshots/phone/              1080×1920  01-today … 08-reminders-backup
+  screenshots/phone/              1080×1920  01-today … 08-reminders
   screenshots/tablet-7in/         1200×1920
   screenshots/tablet-10in/        1600×2560
   build_screenshots.py            renders the panels and the feature graphic from source/
