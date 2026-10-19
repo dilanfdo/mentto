@@ -12,7 +12,8 @@ store/
   screenshots/tablet-7in/         1200×1920
   screenshots/tablet-10in/        1600×2560
   build_screenshots.py            renders the panels and the feature graphic from source/
-  seed_demo.mjs                   builds the demo database the captures are taken with
+  seed_demo.mjs                   builds the demo database the captures are taken with (USD or LKR)
+  video/mentto-demo.mp4           72s demo walkthrough recorded on the emulator, in LKR
 ```
 
 Both build scripts need Google Chrome (headless) at `/Applications/Google Chrome.app`.
@@ -42,7 +43,7 @@ All three sizes render from the same captures, using the same layout as Huffle's
 
 1. Build the demo database (dates are relative to today; best run on a weekday around midday so
    the morning lessons are done and the afternoon is ahead):
-   `node store/seed_demo.mjs /tmp/demo.db`
+   `node store/seed_demo.mjs /tmp/demo.db` (add `LKR` for rupee amounts, as in the demo video)
 2. Install a debug build on the Pixel emulator (`npx expo run:android --device Pixel_9a_Edited`),
    force-stop it, and copy the database in:
    ```bash

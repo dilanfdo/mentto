@@ -4,6 +4,7 @@ import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
+import { LogBox } from 'react-native';
 
 import { BackupSync } from '@/backup/BackupSync';
 import { SnackbarProvider } from '@/components/ui';
@@ -12,6 +13,10 @@ import { ReminderSync } from '@/notifications/ReminderSync';
 import { useTheme } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Development only: expo-router logs this when the dev client opens the app through its own deep
+// link (expo-router/build/fork/useLinking). It isn't from Mentto's code and doesn't affect the app.
+LogBox.ignoreLogs(["Can't perform a React state update on a component that hasn't mounted yet"]);
 
 export default function RootLayout() {
   const { colors } = useTheme();

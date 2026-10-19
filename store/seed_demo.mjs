@@ -2,7 +2,10 @@
 // Builds a demo database for store screenshots: a tutor with ten students, a group class, two
 // months of attendance and payments, all dated relative to today so the app looks lived-in.
 //
-//   node store/seed_demo.mjs [out.db]      (Node 22+, uses the built-in node:sqlite)
+//   node store/seed_demo.mjs [out.db] [USD|LKR]      (Node 22+, uses the built-in node:sqlite)
+//
+// Amounts below are written in US cents; LKR uses the same figures as whole rupees
+// ($120 a month becomes LKR 12,000), which matches typical private tuition fees in Sri Lanka.
 //
 // Then copy it into the debug app (see store/README.md).
 import fs from 'node:fs';
@@ -11,6 +14,9 @@ import { DatabaseSync } from 'node:sqlite';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const out = process.argv[2] ?? path.join(root, 'store', 'demo.db');
+const CURRENCY = (process.argv[3] ?? 'USD').toUpperCase();
+const SCALE = CURRENCY === 'LKR' ? 100 : 1; // minor units: $120.00 = 12000, LKR 12,000.00 = 1200000
+const phone = (n) => (CURRENCY === 'LKR' ? `+94 77 555 ${n}` : `+1 415 555 ${n}`);
 
 // Run the app's own migrations so the schema is exactly what the app expects.
 const schema = fs.readFileSync(path.join(root, 'src', 'db', 'schema.ts'), 'utf8');
@@ -63,16 +69,16 @@ const addStudent = (key, name, extra = {}) => {
   );
 };
 
-addStudent('amaya', 'Amaya Silva', { phone: '+1 415 555 0142', notes: 'Grade 6 vocals. Working on breath support.' });
-addStudent('ravi', 'Ravi Kumar', { phone: '+1 415 555 0171', guardian: 'Priya Kumar', guardianPhone: '+1 415 555 0172' });
-addStudent('lea', 'Léa Martin', { phone: '+1 415 555 0119', email: 'lea.martin@example.com' });
-addStudent('kavindu', 'Kavindu Jayasinghe', { guardian: 'Dilini Jayasinghe', guardianPhone: '+1 415 555 0133' });
-addStudent('nila', 'Nila Perera', { guardian: 'Ruwan Perera', guardianPhone: '+1 415 555 0158' });
-addStudent('arjun', 'Arjun Mehta', { phone: '+1 415 555 0186' });
-addStudent('sofia', 'Sofia Rossi', { phone: '+1 415 555 0127' });
-addStudent('daniel', 'Daniel Okafor', { phone: '+1 415 555 0164' });
-addStudent('mei', 'Mei Tanaka', { phone: '+1 415 555 0191', email: 'mei.t@example.com' });
-addStudent('hannah', 'Hannah Weber', { phone: '+1 415 555 0105' });
+addStudent('amaya', 'Amaya Silva', { phone: phone('0142'), notes: 'Grade 6 vocals. Working on breath support.' });
+addStudent('ravi', 'Ravi Kumar', { phone: phone('0171'), guardian: 'Priya Kumar', guardianPhone: phone('0172') });
+addStudent('lea', 'Léa Martin', { phone: phone('0119'), email: 'lea.martin@example.com' });
+addStudent('kavindu', 'Kavindu Jayasinghe', { guardian: 'Dilini Jayasinghe', guardianPhone: phone('0133') });
+addStudent('nila', 'Nila Perera', { guardian: 'Ruwan Perera', guardianPhone: phone('0158') });
+addStudent('arjun', 'Arjun Mehta', { phone: phone('0186') });
+addStudent('sofia', 'Sofia Rossi', { phone: phone('0127') });
+addStudent('daniel', 'Daniel Okafor', { phone: phone('0164') });
+addStudent('mei', 'Mei Tanaka', { phone: phone('0191'), email: 'mei.t@example.com' });
+addStudent('hannah', 'Hannah Weber', { phone: phone('0105') });
 addStudent('tom', 'Tom Becker', { status: 'archived' });
 
 const groupId = id('gr');
@@ -152,14 +158,14 @@ const addPlan = (key, kind, amount, startsOn, periodMonths = kind === 'monthly' 
   const dueDay = kind === 'per_session' ? null : Math.min(Number(startsOn.slice(8, 10)), 28);
   db.prepare(
     `INSERT INTO fee_plans (id, student_id, kind, amount, currency, due_day, period_months, starts_on, ends_on, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 'USD', ?, ?, ?, NULL, ?, ?)`,
-  ).run(id('fp'), students[key], kind, amount, dueDay, periodMonths, startsOn, now, now);
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+  ).run(id('fp'), students[key], kind, amount * SCALE, CURRENCY, dueDay, periodMonths, startsOn, now, now);
 };
 const pay = (key, amount, paidOn, method = 'bank', note = null) => {
   db.prepare(
     `INSERT INTO payments (id, student_id, amount, currency, paid_on, period, method, note, created_at, updated_at)
-     VALUES (?, ?, ?, 'USD', ?, NULL, ?, ?, ?, ?)`,
-  ).run(id('pa'), students[key], amount, paidOn, method, note, now, now);
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?)`,
+  ).run(id('pa'), students[key], amount * SCALE, CURRENCY, paidOn, method, note, now, now);
 };
 
 addPlan('amaya', 'monthly', 12000, monthDay(2, 5));
@@ -188,8 +194,8 @@ addPlan('hannah', 'monthly', 11000, monthDay(2, Number(T.slice(8, 10)))); // fal
 pay('hannah', 11000, monthDay(2, 19)); pay('hannah', 11000, monthDay(1, 19));
 
 // ── settings ─────────────────────────────────────────────────────────────────
-const meta = { onboarded: '1', tutor_name: 'Nadia Fernandes', currency: 'USD', lesson_reminder_min: '30', fee_reminders: '1', exact_hint_dismissed: '1', change_seq: '1' };
+const meta = { onboarded: '1', tutor_name: 'Nadia Fernandes', currency: CURRENCY, lesson_reminder_min: '30', fee_reminders: '1', exact_hint_dismissed: '1', change_seq: '1' };
 for (const [k, v] of Object.entries(meta)) db.prepare('INSERT INTO meta (key, value) VALUES (?, ?)').run(k, v);
 
 db.close();
-console.log(`wrote ${path.relative(process.cwd(), out)} for ${T} (${Object.keys(students).length} students, ${n} attendance marks)`);
+console.log(`wrote ${path.relative(process.cwd(), out)} in ${CURRENCY} for ${T} (${Object.keys(students).length} students, ${n} attendance marks)`);
