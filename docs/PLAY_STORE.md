@@ -48,7 +48,20 @@ personal or letsbridge account for any of these.
 
 ---
 
-## Part 1 — Create the upload key [you]
+## Part 1 — Create the upload key [you] ✅ done (2026-10-19)
+
+Created: `~/.mentto-signing/mentto-upload-key.jks` (PKCS12, alias `mentto-upload`, RSA 4096, owner
+`CN=NexusDigitalLabs, OU=Mentto, O=NexusDigitalLabs, C=LK`, valid until 9999-12-31) with
+`~/.mentto-signing/keystore.properties`. Verified: `bundleRelease` signs the AAB with it.
+
+| Fingerprint | Value |
+|---|---|
+| Upload key SHA-1 | `0D:69:4D:05:18:D5:2D:FD:4C:86:45:6D:F5:3D:A1:34:14:7D:9F:31` |
+| Upload key SHA-256 | `6B:F7:18:4E:5F:F3:45:BC:0F:0C:96:77:40:F8:40:4D:60:4E:A2:C2:F7:E4:DD:74:DC:97:B9:96:02:29:3A:FE` |
+
+The password is only in `keystore.properties` and the backup (password manager + offline copy).
+
+How it was made, for reference:
 
 The upload key signs the files you upload. Google then re-signs the app with its own **app signing key**
 for users (Play App Signing), so if the upload key is ever lost, Play Console can reset it.
