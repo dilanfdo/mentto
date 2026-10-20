@@ -241,7 +241,12 @@ move them. **Activate** each base plan.
 
 ---
 
-## Part 6 — Connect RevenueCat to Play; entitlement and offering [you]
+## Part 6 — Connect RevenueCat to Play; entitlement and offering [you] ✅ done (2026-10-20)
+
+Status: service account `revenuecat@mentto-511807.iam.gserviceaccount.com` uploaded; catalog checks
+green, purchase validation waiting on Google's permission delay; products imported (lifetime as
+non-consumable), entitlement `pro`, offering `default` with three packages. Still to do: recheck
+credentials and connect the Pub/Sub notifications topic.
 
 ### 6a. Service account (lets RevenueCat check purchases with Google)
 
@@ -249,12 +254,13 @@ In Google Cloud, project **Mentto** (the one that already holds the Drive backup
 
 1. **APIs & Services → Library**: enable **Google Play Android Developer API** and
    **Google Play Developer Reporting API**.
-2. **IAM & Admin → Service accounts → Create**: name `revenuecat-play`, no project roles.
+2. **IAM & Admin → Service accounts → Create**: name `revenuecat`, roles **Pub/Sub Admin** and
+   **Monitoring Viewer** (needed for real-time notifications; add later via **IAM → Grant access**).
 3. Open it → **Keys → Add key → JSON** → download (keep it private; don't commit it).
 
 In Play Console → **Users and permissions → Invite new users**:
 
-- Email: the service account's address (`revenuecat-play@<project>.iam.gserviceaccount.com`)
+- Email: the service account's address (`revenuecat@mentto-511807.iam.gserviceaccount.com`)
 - **App permissions → Add app → Mentto**, and tick:
   **View app information and download bulk reports**, **View financial data, orders, and cancellation
   survey responses**, and **Manage orders and subscriptions**. (Odova's lesson: missing either the
@@ -265,13 +271,15 @@ In RevenueCat → **Mentto (Android) app settings → Service account credential
 The status can take up to **36 hours** to turn green ("Valid credentials"). You can continue meanwhile.
 
 Also in the app settings, under **Google developer notifications**, follow RevenueCat's prompt to connect
-the Pub/Sub topic (renewals and cancellations then reach RevenueCat in real time).
+the Pub/Sub topic (enable the **Cloud Pub/Sub API** first), then paste the topic name into Play Console →
+**Monetization setup → Real-time developer notifications** and send a test notification.
 
 ### 6b. Products, entitlement and offering
 
 RevenueCat → **Product catalog**:
 
-1. **Products → Import** → select `mentto_pro:monthly`, `mentto_pro:yearly` and `mentto_pro_lifetime`.
+1. **Products → Import** → select `mentto_pro:monthly`, `mentto_pro:yearly` and `mentto_pro_lifetime`
+   (set the lifetime type to **Non-consumable**, so it restores after a reinstall).
 2. **Entitlements → New** → identifier **`pro`** (must be exactly this) → description `Mentto Pro` →
    **Attach** all three products.
 3. **Offerings → New** → identifier `default`, description `Monthly, yearly and lifetime` → add packages:
