@@ -244,9 +244,9 @@ move them. **Activate** each base plan.
 ## Part 6 — Connect RevenueCat to Play; entitlement and offering [you] ✅ done (2026-10-20)
 
 Status: service account `revenuecat@mentto-511807.iam.gserviceaccount.com` uploaded; catalog checks
-green, purchase validation waiting on Google's permission delay; products imported (lifetime as
-non-consumable), entitlement `pro`, offering `default` with three packages. Still to do: recheck
-credentials and connect the Pub/Sub notifications topic.
+valid (all three checks green); products imported (lifetime as non-consumable), entitlement `pro`,
+offering `default` (current) with three packages; real-time notifications connected via topic
+`projects/mentto-511807/topics/Play-Store-Notifications` (test received).
 
 ### 6a. Service account (lets RevenueCat check purchases with Google)
 
