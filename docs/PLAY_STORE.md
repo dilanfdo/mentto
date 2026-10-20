@@ -297,10 +297,11 @@ come from Play, so nothing in the app needs changing when you adjust prices.
 
 ---
 
-## Part 7 — Google Cloud: Drive backup for Play installs [you]
+## Part 7 — Google Cloud: Drive backup for Play installs [you] ✅ done (2026-10-20)
 
 Drive sign-in works only when the installed app's signing SHA-1 has its own Android OAuth client.
-Today the project has a client for the **debug** key only.
+Project `mentto-511807` now has three: `Mentto Android (debug)` (`5E:8F:16:06:…:F6:25`),
+`Mentto Android (Play)` and `Mentto Android (upload)`; the consent screen is External, In production.
 
 Google Cloud → project **Mentto** → **Google Auth Platform (APIs & Services → Credentials)**:
 
