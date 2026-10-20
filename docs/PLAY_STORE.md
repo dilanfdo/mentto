@@ -305,9 +305,10 @@ Today the project has a client for the **debug** key only.
 Google Cloud → project **Mentto** → **Google Auth Platform (APIs & Services → Credentials)**:
 
 1. **Create credentials → OAuth client ID → Android** — name `Mentto Android (Play)`, package
-   `app.nexusdigitallabs.mentto`, SHA-1 = **Play app signing key** from Part 4.
-2. Again for `Mentto Android (upload)` with the **upload key** SHA-1 from Part 1 (for sideloaded
-   release APKs).
+   `app.nexusdigitallabs.mentto`, SHA-1 = **Play app signing key**
+   `07:16:AC:49:87:BE:6A:04:0B:9F:BD:B1:83:9E:90:2F:65:22:F8:1E`.
+2. Again for `Mentto Android (upload)` with the **upload key** SHA-1
+   `0D:69:4D:05:18:D5:2D:FD:4C:86:45:6D:F5:3D:A1:34:14:7D:9F:31` (for sideloaded release APKs).
 3. **Branding**: app name `Mentto`, support email `hello@nexusdigitallabs.dev`, app logo
    `store/icon-512.png` (optional), home page `https://nexusdigitallabs.dev/mentto/`, privacy policy
    `https://nexusdigitallabs.dev/mentto/privacy-policy/`, authorized domain `nexusdigitallabs.dev`.
