@@ -327,7 +327,14 @@ to an hour.
 
 ---
 
-## Part 8 — Test on a real phone from Play [you]
+## Part 8 — Test on a real phone from Play [you] ✅ done (2026-10-20, Samsung Galaxy A16)
+
+Result: Play build 1.0.0 (1), signed with the Play key `07:16:AC:…:F8:1E`. Pro screen showed LKR prices and
+the 7-day trial; a test monthly purchase unlocked Pro and RevenueCat showed `pro` active (trial →
+conversion via `trial-7d`); Drive sign-in, restore and back up worked; lesson reminders arrived on time.
+Notes: restoring a backup also restores Settings (that backup had a 1-hour reminder, so lessons moved to
+within the hour had no reminder; correct behaviour). The first Google sign-in failed once
+(`ASYNC_OP_IN_PROGRESS`); fixed in the next build.
 
 Install from the **internal testing** link on a phone signed in with a **license tester** account
 (uninstall the development build first; the two can't share the same package).
