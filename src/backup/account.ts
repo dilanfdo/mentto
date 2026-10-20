@@ -52,16 +52,29 @@ export async function signOut(): Promise<void> {
   } catch {}
 }
 
+// The native module allows one getTokens() at a time and rejects an overlapping call
+// (ASYNC_OP_IN_PROGRESS), so callers that ask together (the backup list and the engine) share one.
+let pending: Promise<string> | null = null;
+
 /** A current access token. `stale` is one Drive rejected, dropped from the cache first. */
-export async function getAccessToken(stale?: string): Promise<string> {
-  configure();
-  if (stale) await GoogleSignin.clearCachedAccessToken(stale);
-  if (!GoogleSignin.getCurrentUser()) {
-    const email = await restoreSignIn();
-    if (!email) throw new NotSignedIn();
-  }
-  const { accessToken } = await GoogleSignin.getTokens();
-  return accessToken;
+export function getAccessToken(stale?: string): Promise<string> {
+  const run = async () => {
+    if (pending) await pending.catch(() => {});
+    configure();
+    if (stale) await GoogleSignin.clearCachedAccessToken(stale);
+    if (!GoogleSignin.getCurrentUser()) {
+      const email = await restoreSignIn();
+      if (!email) throw new NotSignedIn();
+    }
+    const { accessToken } = await GoogleSignin.getTokens();
+    return accessToken;
+  };
+  if (pending && !stale) return pending;
+  const p = run().finally(() => {
+    if (pending === p) pending = null;
+  });
+  pending = p;
+  return p;
 }
 
 export class NotSignedIn extends Error {
