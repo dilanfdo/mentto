@@ -7,8 +7,12 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "app.nexusdigitallabs.mentto"
+      "supportsTablet": false,
+      "bundleIdentifier": "app.nexusdigitallabs.mentto",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "app.nexusdigitallabs.mentto",

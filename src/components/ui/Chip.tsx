@@ -5,6 +5,7 @@ import { radii, spacing, useTheme } from '@/theme';
 
 import { Icon } from './Icon';
 import { Text } from './Text';
+import { withPressFeedback } from './pressFeedback';
 
 type ChipProps = {
   label: string;
@@ -25,13 +26,13 @@ export function Chip({ label, selected, onPress, accessibilityLabel }: ChipProps
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ checked: selected }}
       android_ripple={{ color: colors.ripple, borderless: false }}
-      style={[
+      style={withPressFeedback([
         styles.chip,
         {
           backgroundColor: selected ? colors.primarySoft : colors.surface,
           borderColor: selected ? colors.primary : colors.border,
         },
-      ]}
+      ])}
     >
       {selected && <Icon name="check" size={16} color="onPrimarySoft" />}
       <Text variant="labelStrong" color={selected ? 'onPrimarySoft' : 'textSecondary'}>

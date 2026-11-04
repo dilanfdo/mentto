@@ -5,6 +5,7 @@ import { sizes, spacing, useTheme } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
+import { withPressFeedback } from './pressFeedback';
 
 type Props = {
   title: string;
@@ -76,7 +77,7 @@ export function ListRow({
       accessibilityLabel={accessibilityLabel ?? [title, subtitle].filter(Boolean).join(', ')}
       accessibilityHint={accessibilityHint}
       android_ripple={{ color: colors.ripple }}
-      style={styles.row}
+      style={withPressFeedback(styles.row)}
     >
       {content}
     </Pressable>

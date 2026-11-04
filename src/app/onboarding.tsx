@@ -168,7 +168,7 @@ export default function Onboarding() {
                 Never miss a lesson or a fee
               </Text>
               <Text variant="body" color="textSecondary">
-                Mentto can remind you 30 minutes before each lesson and on the morning a fee is due. Android will ask
+                Mentto can remind you 30 minutes before each lesson and on the morning a fee is due. Your phone will ask
                 for permission to show notifications.
               </Text>
             </View>

@@ -14,10 +14,12 @@ import {
   toDate,
   toISODate,
   toISOTime,
+  type ISODate,
+  type ISOTime,
 } from '@/lib/dates';
 import { radii, spacing, useTheme } from '@/theme';
 
-import { Avatar, Divider, Icon, ListRow, Sheet, Text, useSnackbar } from './ui';
+import { Avatar, Button, DateField, Divider, Icon, ListRow, Sheet, Text, TimeField, useSnackbar } from './ui';
 
 type Props = {
   lesson: Lesson | null;
@@ -65,8 +67,11 @@ export function LessonSheet({ lesson: current, onClose, ownerId }: Props) {
   const [lesson, setLesson] = useState(current);
   // Group attendance updates in place while the sheet stays open.
   const [marks, setMarks] = useState<Record<string, MemberStatus>>({});
+  // iOS has no picker dialogs, so moving a lesson happens inside the sheet.
+  const [moving, setMoving] = useState<{ date: ISODate; time: ISOTime } | null>(null);
   if (current && current !== lesson) {
     setLesson(current);
+    setMoving(null);
     setMarks(Object.fromEntries(current.members.map((m) => [m.studentId, m.status])));
   }
 
@@ -128,8 +133,21 @@ export function LessonSheet({ lesson: current, onClose, ownerId }: Props) {
     snackbar('Lesson restored to its usual time', { icon: 'restore' });
   };
 
+  const saveMove = async (newDate: ISODate, time: ISOTime) => {
+    const startsAt = joinDateTime(newDate, time);
+    if (startsAt === joinDateTime(lesson.originalDate, lesson.startTime) && !lesson.moved) return;
+    await setException(db, lesson.scheduleId, lesson.originalDate, 'moved', startsAt);
+    snackbar(`Moved to ${formatRelativeDay(newDate)}, ${formatTimeRange(time, lesson.durationMin)}`, {
+      icon: 'calendar-edit',
+      action: { label: 'Undo', onPress: () => clearException(db, lesson.scheduleId, lesson.originalDate) },
+    });
+  };
+
   const reschedule = () => {
-    if (Platform.OS !== 'android') return;
+    if (Platform.OS !== 'android') {
+      setMoving({ date: lesson.date, time: lesson.startTime });
+      return;
+    }
     onClose();
     DateTimePickerAndroid.open({
       value: toDate(lesson.date, lesson.startTime),
@@ -140,15 +158,7 @@ export function LessonSheet({ lesson: current, onClose, ownerId }: Props) {
           value: toDate(lesson.date, lesson.startTime),
           mode: 'time',
           minuteInterval: 5,
-          onValueChange: async (_e, time) => {
-            const startsAt = joinDateTime(newDate, toISOTime(time));
-            if (startsAt === joinDateTime(lesson.originalDate, lesson.startTime) && !lesson.moved) return;
-            await setException(db, lesson.scheduleId, lesson.originalDate, 'moved', startsAt);
-            snackbar(`Moved to ${formatRelativeDay(newDate)}, ${formatTimeRange(toISOTime(time), lesson.durationMin)}`, {
-              icon: 'calendar-edit',
-              action: { label: 'Undo', onPress: () => clearException(db, lesson.scheduleId, lesson.originalDate) },
-            });
-          },
+          onValueChange: (_e, time) => saveMove(newDate, toISOTime(time)),
         });
       },
     });
@@ -165,7 +175,21 @@ export function LessonSheet({ lesson: current, onClose, ownerId }: Props) {
       title={lesson.title}
       subtitle={`${formatLongDate(lesson.date)} · ${formatTimeRange(lesson.startTime, lesson.durationMin)}`}
     >
-      {lesson.status === 'cancelled' ? (
+      {moving ? (
+        <ScrollView contentContainerStyle={styles.move} keyboardShouldPersistTaps="handled">
+          <DateField label="New day" value={moving.date} onChange={(date) => setMoving({ ...moving, date })} />
+          <TimeField label="New time" value={moving.time} onChange={(time) => setMoving({ ...moving, time })} />
+          <Button
+            label="Move lesson"
+            fullWidth
+            onPress={() => {
+              onClose();
+              saveMove(moving.date, moving.time);
+            }}
+          />
+          <Button label="Back" variant="ghost" fullWidth onPress={() => setMoving(null)} />
+        </ScrollView>
+      ) : lesson.status === 'cancelled' ? (
         <ListRow leadingIcon="restore" title="Restore this lesson" subtitle="Put it back on the schedule" onPress={restore} />
       ) : (
         <>
@@ -228,7 +252,7 @@ export function LessonSheet({ lesson: current, onClose, ownerId }: Props) {
             <ListRow leadingIcon="undo-variant" title="Clear attendance" onPress={() => markSolo(null)} />
           )}
 
-          {!hasMarks && Platform.OS === 'android' && (
+          {!hasMarks && (
             <ListRow
               leadingIcon="calendar-edit"
               title="Move this lesson"
@@ -263,7 +287,7 @@ export function LessonSheet({ lesson: current, onClose, ownerId }: Props) {
           )}
         </>
       )}
-      {showOwnerLink && (
+      {showOwnerLink && !moving && (
         <ListRow
           leadingIcon={isGroup ? 'account-group-outline' : 'account-outline'}
           title={isGroup ? 'View group' : 'View student'}
@@ -280,6 +304,11 @@ export function LessonSheet({ lesson: current, onClose, ownerId }: Props) {
 }
 
 const styles = StyleSheet.create({
+  move: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xs,
+    gap: spacing.md,
+  },
   memberScroll: {
     flexGrow: 0,
     maxHeight: 300,

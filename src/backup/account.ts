@@ -1,14 +1,17 @@
 // Google sign-in for backup. The only API scope asked for is drive.appdata: a private app folder,
 // with no access to the tutor's own Drive files.
 
+import { Platform } from 'react-native';
 import { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } from '@react-native-google-signin/google-signin';
+
+import { GOOGLE_IOS_CLIENT_ID } from '@/lib/config';
 
 export const DRIVE_APPDATA_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 
 let configured = false;
 function configure() {
   if (configured) return;
-  GoogleSignin.configure({ scopes: [DRIVE_APPDATA_SCOPE] });
+  GoogleSignin.configure({ scopes: [DRIVE_APPDATA_SCOPE], iosClientId: GOOGLE_IOS_CLIENT_ID || undefined });
   configured = true;
 }
 
@@ -16,6 +19,8 @@ export class SignInCancelled extends Error {}
 
 /** Asks the tutor to pick an account and allow the app folder. Returns the account's email. */
 export async function signIn(): Promise<string> {
+  // Without a client id the native sign-in would crash the app rather than fail.
+  if (Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID) throw new Error('Google sign-in isn’t available in this build.');
   configure();
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -34,6 +39,7 @@ export async function signIn(): Promise<string> {
 
 /** Restores the previous sign-in without UI. Null if the tutor has to sign in again. */
 export async function restoreSignIn(): Promise<string | null> {
+  if (Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID) return null;
   configure();
   if (!GoogleSignin.hasPreviousSignIn()) return null;
   try {

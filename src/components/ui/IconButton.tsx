@@ -3,6 +3,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { radii, sizes, useTheme, type ColorTokens } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
+import { withPressFeedback } from './pressFeedback';
 
 type Props = {
   icon: IconName;
@@ -25,11 +26,11 @@ export function IconButton({ icon, label, onPress, color = 'text', filled, disab
       accessibilityState={{ disabled: !!disabled }}
       android_ripple={{ color: colors.ripple, borderless: true, radius: sizes.touch / 2 }}
       hitSlop={4}
-      style={[
+      style={withPressFeedback([
         styles.base,
         filled && { backgroundColor: colors.surfaceMuted },
         disabled && { opacity: 0.4 },
-      ]}
+      ])}
     >
       <Icon name={icon} color={color} />
     </Pressable>

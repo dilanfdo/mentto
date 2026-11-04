@@ -14,6 +14,7 @@ import {
 import { radii, spacing, useTheme, type ColorTokens } from '@/theme';
 
 import { Badge, Text } from './ui';
+import { withPressFeedback } from './ui/pressFeedback';
 
 type Props = {
   lesson: Lesson;
@@ -87,7 +88,7 @@ export function LessonRow({ lesson, onPress, showDate, hideName }: Props) {
         .join(', ')}
       accessibilityHint="Opens lesson actions"
       android_ripple={{ color: colors.ripple }}
-      style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      style={withPressFeedback([styles.row, { backgroundColor: colors.surface, borderColor: colors.border }])}
     >
       <View style={[styles.bar, { backgroundColor: colors[accent] }]} />
       <View style={styles.time}>

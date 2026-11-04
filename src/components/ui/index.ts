@@ -16,5 +16,5 @@ export { SegmentedControl } from './SegmentedControl';
 export { Sheet } from './Sheet';
 export { Skeleton, SkeletonList } from './Skeleton';
 export { SnackbarProvider, useSnackbar } from './Snackbar';
-export { Text } from './Text';
+export { FitTitle, Text } from './Text';
 export { TextField } from './TextField';

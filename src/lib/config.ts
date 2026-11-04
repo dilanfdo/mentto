@@ -16,6 +16,10 @@ export const REVENUECAT_API_KEY_ANDROID =
   process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID || 'goog_gyMMfySHZJJNrzNCrFxlLKwGHnE';
 export const REVENUECAT_API_KEY_IOS = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS || '';
 
+// The iOS OAuth client for Drive backup (Android needs none compiled in). Not a secret. app.config.js
+// reads the same variable for the URL scheme; a default here has to be added there too.
+export const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
+
 /** Must match the entitlement identifier in the RevenueCat dashboard. */
 export const REVENUECAT_ENTITLEMENT_ID = 'pro';
 

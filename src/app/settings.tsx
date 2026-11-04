@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { Linking, StyleSheet, Switch, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Switch, View } from 'react-native';
 
 import { backupNow, disableBackup, getBackupState, retryBackup, type BackupState } from '@/backup/engine';
 import { formatAgo, useBackupState, useNow } from '@/backup/useBackup';
@@ -132,7 +132,7 @@ export default function SettingsScreen() {
                 title="Notifications are off"
                 subtitle={
                   permission === 'denied'
-                    ? 'Turn them on for Mentto in Android settings.'
+                    ? 'Turn them on for Mentto in your phone’s settings.'
                     : 'Allow notifications so reminders can reach you.'
                 }
                 trailing={<Badge label={permission === 'denied' ? 'Open settings' : 'Allow'} tone="primary" />}
@@ -344,7 +344,9 @@ function BackupSection() {
           />
         </Card>
         <Text variant="caption" color="textTertiary" style={styles.note}>
-          Android also includes Mentto in your phone’s own Google backup when it’s turned on.
+          {Platform.OS === 'ios'
+            ? 'iCloud Backup also includes Mentto when it’s turned on for this iPhone.'
+            : 'Android also includes Mentto in your phone’s own Google backup when it’s turned on.'}
         </Text>
       </Section>
     );

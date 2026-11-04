@@ -91,7 +91,7 @@ function deviceName(): string {
     const c = Platform.constants as { Manufacturer?: string; Model?: string };
     return [c.Manufacturer, c.Model].filter(Boolean).join(' ').slice(0, 60) || 'Android phone';
   }
-  return Platform.OS;
+  return Platform.OS === 'ios' ? (Platform.isPad ? 'iPad' : 'iPhone') : Platform.OS;
 }
 
 /** A backup from another install that is newer than anything this phone has seen. */

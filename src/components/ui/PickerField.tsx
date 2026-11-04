@@ -17,6 +17,7 @@ import { radii, sizes, spacing, useTheme } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
+import { withPressFeedback } from './pressFeedback';
 
 type BaseProps = {
   label: string;
@@ -39,7 +40,7 @@ function FieldButton({ label, display, icon, onPress, hint }: BaseProps) {
         accessibilityLabel={`${label}: ${display}`}
         accessibilityHint="Opens a picker"
         android_ripple={{ color: colors.ripple }}
-        style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface }]}
+        style={withPressFeedback([styles.field, { borderColor: colors.border, backgroundColor: colors.surface }])}
       >
         <Icon name={icon} size={20} color="textTertiary" />
         <Text variant="body" style={styles.value}>
@@ -92,6 +93,8 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate, hi
           value={toDate(value)}
           mode="date"
           display="inline"
+          minimumDate={minimumDate ? toDate(minimumDate) : undefined}
+          maximumDate={maximumDate ? toDate(maximumDate) : undefined}
           onValueChange={(_, date) => onChange(toISODate(date))}
         />
       )}

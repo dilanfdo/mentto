@@ -1,5 +1,5 @@
 import { forwardRef, useState } from 'react';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { Platform, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { radii, sizes, spacing, typography, useTheme } from '@/theme';
 
@@ -67,7 +67,7 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
             setFocused(false);
             onBlur?.(e);
           }}
-          style={[styles.input, typography.body, { color: colors.text }]}
+          style={[styles.input, typography.body, { color: colors.text }, Platform.OS === 'ios' && !multiline && styles.inputIos]}
           {...rest}
         />
       </View>
@@ -113,6 +113,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.sm,
     includeFontPadding: false,
+  },
+  // A fixed line height pushes single-line text below the middle of the field on iOS.
+  inputIos: {
+    lineHeight: undefined,
   },
   message: {
     flexDirection: 'row',

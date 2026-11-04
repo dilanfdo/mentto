@@ -6,6 +6,7 @@ import type { Student } from '@/db/students';
 import { spacing, useTheme } from '@/theme';
 
 import { Avatar, Button, Card, Divider, Icon, Screen, Text, TextField } from './ui';
+import { withPressFeedback } from './ui/pressFeedback';
 
 type Props = {
   title: string;
@@ -83,7 +84,7 @@ export function GroupForm({ title, submitLabel, students, initial, onSubmit, chi
                     accessibilityLabel={s.name}
                     accessibilityState={{ checked: selected }}
                     android_ripple={{ color: colors.ripple }}
-                    style={styles.row}
+                    style={withPressFeedback(styles.row)}
                   >
                     <Avatar name={s.name} size={40} />
                     <Text variant="bodyStrong" style={styles.flex} numberOfLines={1}>

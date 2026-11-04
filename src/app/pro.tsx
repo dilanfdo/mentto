@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { usePro, type ProFeature } from '@/billing/ProProvider';
@@ -29,7 +29,10 @@ const FEATURES: { icon: IconName; title: string; body: string; key: ProFeature }
 const PERIOD: Record<Plan['kind'], string> = { yearly: 'a year', monthly: 'a month', lifetime: 'once' };
 const NAME: Record<Plan['kind'], string> = { yearly: 'Yearly', monthly: 'Monthly', lifetime: 'Lifetime' };
 
-const MANAGE_URL = 'https://play.google.com/store/account/subscriptions';
+const IOS = Platform.OS === 'ios';
+const MANAGE_URL = IOS ? 'https://apps.apple.com/account/subscriptions' : 'https://play.google.com/store/account/subscriptions';
+const PRIVACY_URL = 'https://nexusdigitallabs.dev/mentto/privacy-policy/';
+const IOS_TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
 
 function PlanCard({ plan, selected, onPress }: { plan: Plan; selected: boolean; onPress: () => void }) {
   const { colors } = useTheme();
@@ -116,7 +119,7 @@ export default function ProScreen() {
     else if (result.isPro) {
       router.back();
       snackbar('Pro restored', { icon: 'check-decagram' });
-    } else Alert.alert('Nothing to restore', 'This Google account has no Mentto Pro purchase.');
+    } else Alert.alert('Nothing to restore', IOS ? 'This Apple Account has no Mentto Pro purchase.' : 'This Google account has no Mentto Pro purchase.');
   };
 
   const hero = (
@@ -186,8 +189,10 @@ export default function ProScreen() {
             />
             <Text variant="caption" color="textTertiary" align="center">
               {plan?.kind === 'lifetime'
-                ? 'One payment through Google Play.'
-                : 'Cancel any time in Google Play. You won’t be charged if you cancel during the trial.'}
+                ? `One payment through ${IOS ? 'the App Store' : 'Google Play'}.`
+                : IOS
+                  ? `Renews automatically unless cancelled at least 24 hours before the ${plan?.trialDays ? 'trial' : 'period'} ends. Charged to your Apple Account. Manage it in your account settings.`
+                  : 'Cancel any time in Google Play. You won’t be charged if you cancel during the trial.'}
             </Text>
           </View>
         ) : undefined
@@ -217,6 +222,10 @@ export default function ProScreen() {
 
       <View style={styles.links}>
         <Button label="Restore purchases" variant="ghost" size="small" onPress={onRestore} />
+        <View style={styles.legal}>
+          <Button label="Privacy Policy" variant="ghost" size="small" onPress={() => Linking.openURL(PRIVACY_URL)} />
+          {IOS && <Button label="Terms of Use" variant="ghost" size="small" onPress={() => Linking.openURL(IOS_TERMS_URL)} />}
+        </View>
         {billingMode === 'simulated' && <Badge label="Test purchases (development build)" icon="flask-outline" />}
       </View>
       <Text variant="caption" color="textTertiary" align="center">
@@ -280,6 +289,11 @@ const styles = StyleSheet.create({
   },
   links: {
     alignItems: 'center',
+    gap: spacing.xs,
+  },
+  legal: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     gap: spacing.xs,
   },
   footer: {

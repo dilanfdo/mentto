@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View, type StyleProp, type ViewProps, type ViewStyle } from 'react-native';
 
 import { radii, spacing, useTheme } from '@/theme';
+import { withPressFeedback } from './pressFeedback';
 
 type Props = ViewProps & {
   onPress?: () => void;
@@ -26,7 +27,7 @@ export function Card({ onPress, padded = true, style, children, accessibilityLab
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         android_ripple={{ color: colors.ripple }}
-        style={cardStyle}
+        style={withPressFeedback(cardStyle)}
         {...rest}
       >
         {children}

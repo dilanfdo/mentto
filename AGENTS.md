@@ -1,7 +1,7 @@
 ## Mentto
 
 Mentto is an offline-first planner for independent tutors (students, fee plans, recurring slots,
-attendance, payments, reminders). v1 is Android-first and tutor-only; there is no server.
+attendance, payments, reminders). Android is live; iOS is prepared (see `docs/ios-release.md`). Tutor-only; there is no server.
 
 - All data lives in SQLite. The schema and migrations are in `src/db/schema.ts`: append a new
   migration for any schema change and never edit one that has shipped.
@@ -38,9 +38,10 @@ attendance, payments, reminders). v1 is Android-first and tutor-only; there is n
   Database work that must not overlap a transaction goes through `exclusive()` in `core.ts`.
 - Google OAuth lives in the NexusDigitalLabs Cloud project "Mentto" (scope `drive.appdata`). Android needs one
   OAuth client per signing key (debug, Play App Signing, and upload if sideloading release builds); no client
-  id is compiled in. iOS will need an iOS client and the google-signin config plugin with `iosUrlScheme`.
+  id is compiled in. iOS uses one iOS client, from `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`; `app.config.js` adds the
+  google-signin plugin with its `iosUrlScheme`.
 - `src/billing/` Mentto Pro. `purchases.ts` talks to RevenueCat (entitlement `pro`; offering packages
-  $rc_annual, $rc_monthly, $rc_lifetime) when `EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID` is set; development
+  $rc_annual, $rc_monthly, $rc_lifetime) when the platform's key is set (`EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID` or `_IOS`); development
   builds without a key simulate purchases, release builds without a key never unlock Pro. `ProProvider`
   exposes `usePro()` and `openPaywall(feature)`; the Pro screen is `src/app/pro.tsx`.
 - Free vs Pro: free covers `FREE_LIMITS` (8 active students, 1 active group; enforced in `student/new`,

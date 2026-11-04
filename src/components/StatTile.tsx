@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/theme';
 
-import { Card, Icon, Text, type IconName } from './ui';
+import { Card, FitTitle, Icon, Text, type IconName } from './ui';
 
 type Props = {
   icon: IconName;
@@ -25,9 +25,7 @@ export function StatTile({ icon, label, value, caption, onPress }: Props) {
           {label}
         </Text>
       </View>
-      <Text variant="title" numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-      </Text>
+      <FitTitle>{value}</FitTitle>
       {caption && (
         <Text variant="caption" color="textTertiary" numberOfLines={1}>
           {caption}

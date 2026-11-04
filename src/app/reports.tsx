@@ -14,6 +14,7 @@ import {
   Screen,
   Section,
   SkeletonList,
+  FitTitle,
   Text,
 } from '@/components/ui';
 import { useQuery, type DB } from '@/db/core';
@@ -181,9 +182,7 @@ export default function ReportsScreen() {
               <Text variant="caption" color="textTertiary">
                 Owed now
               </Text>
-              <Text variant="title" numberOfLines={1} adjustsFontSizeToFit>
-                {formatMoney(data.outstanding, data.currency)}
-              </Text>
+              <FitTitle>{formatMoney(data.outstanding, data.currency)}</FitTitle>
               <Text variant="caption" color="textTertiary">
                 {data.owingCount} {data.owingCount === 1 ? 'student' : 'students'}
               </Text>

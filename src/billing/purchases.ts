@@ -11,7 +11,7 @@
 //    `pro` and attach all three products, and make a "default" offering with the $rc_monthly,
 //    $rc_annual and $rc_lifetime packages.
 // 3. The Android public key is the default in src/lib/config.ts (override with
-//    EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID). Add the iOS key there when iOS ships.
+//    EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID). iOS: see docs/ios-release.md.
 import type { CustomerInfo, PurchasesPackage } from 'react-native-purchases';
 import { Platform } from 'react-native';
 
@@ -112,11 +112,27 @@ export function subscribeToPro(listener: Listener): () => void {
 
 const KIND: Record<string, PlanKind | undefined> = { ANNUAL: 'yearly', MONTHLY: 'monthly', LIFETIME: 'lifetime' };
 
-function trialDays(pkg: PurchasesPackage): number | null {
+const DAYS_PER_UNIT = { DAY: 1, WEEK: 7, MONTH: 30, YEAR: 365 } as Record<string, number>;
+
+function trialDays(pkg: PurchasesPackage, iosEligible: Set<string>): number | null {
+  if (Platform.OS === 'ios') {
+    const intro = pkg.product.introPrice;
+    if (!intro || intro.price !== 0 || !iosEligible.has(pkg.product.identifier)) return null;
+    return intro.cycles * intro.periodNumberOfUnits * (DAYS_PER_UNIT[intro.periodUnit] ?? 1);
+  }
   const free = pkg.product.defaultOption?.freePhase?.billingPeriod;
   if (!free) return null;
-  const perUnit = { DAY: 1, WEEK: 7, MONTH: 30, YEAR: 365 } as Record<string, number>;
-  return free.value * (perUnit[free.unit] ?? 1);
+  return free.value * (DAYS_PER_UNIT[free.unit] ?? 1);
+}
+
+/** Products this Apple Account can still get the trial on. The App Store lists the offer either way. */
+async function iosTrialEligible(pkgs: PurchasesPackage[]): Promise<Set<string>> {
+  if (Platform.OS !== 'ios') return new Set();
+  const p = await sdk();
+  const ids = pkgs.filter((pkg) => pkg.product.introPrice).map((pkg) => pkg.product.identifier);
+  if (ids.length === 0) return new Set();
+  const result = await p.checkTrialOrIntroductoryPriceEligibility(ids);
+  return new Set(ids.filter((id) => result[id]?.status === p.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE));
 }
 
 let packages = new Map<string, PurchasesPackage>();
@@ -130,6 +146,7 @@ export async function loadPlans(): Promise<Plan[]> {
     const order: PlanKind[] = ['yearly', 'monthly', 'lifetime'];
     packages = new Map();
     const plans: Plan[] = [];
+    const eligible = await iosTrialEligible(offering?.availablePackages ?? []).catch(() => new Set<string>());
     for (const pkg of offering?.availablePackages ?? []) {
       const kind = KIND[pkg.packageType];
       if (!kind) continue;
@@ -139,7 +156,7 @@ export async function loadPlans(): Promise<Plan[]> {
         kind,
         price: pkg.product.priceString,
         perMonth: kind === 'yearly' ? pkg.product.pricePerMonthString : null,
-        trialDays: trialDays(pkg),
+        trialDays: trialDays(pkg, eligible),
       });
     }
     return plans.sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
