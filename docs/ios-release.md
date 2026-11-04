@@ -1,8 +1,6 @@
 # iOS release checklist
 
-Status: the app code, native config, listing text
-([ios-app-store-listing.md](./ios-app-store-listing.md)) and screenshots are ready and a simulator
-build runs. Everything below needs the accounts.
+Status (2026-11-04): build 1 is on TestFlight. Testing, finishing the listing and submission are next. Listing text is in [ios-app-store-listing.md](./ios-app-store-listing.md).
 
 **Use only the personal Apple ID (`dilanfdo1@gmail.com`, team `S3NGY3A2RA`). Never the LetsBridge
 account, team or certificates.** Simulator builds disable code signing, so no certificate is touched.
@@ -24,12 +22,13 @@ account, team or certificates.** Simulator builds disable code signing, so no ce
 
 1. **Business** (Agreements, Tax and Banking): already done for Odova if the Paid Apps agreement,
    tax forms and bank are active. No repeat needed.
-2. **Certificates, Identifiers & Profiles** (developer.apple.com): nothing to do; Xcode registers
-   `app.nexusdigitallabs.mentto` on the first archive. If you'd rather create the app before
-   archiving, register the identifier by hand with no extra capabilities.
+2. **Certificates, Identifiers & Profiles** (developer.apple.com): register
+   `app.nexusdigitallabs.mentto` as an explicit App ID. App Store Connect only offers registered IDs.
 3. **Apps, +, New App**: iOS, the name, bundle ID, SKU and language from the listing doc.
 4. **Monetization**: create the subscription group, both subscriptions and the Lifetime purchase, with
-   the table in the listing doc. Upload `store/ios-review/paywall.png` as each review screenshot.
+   the table in the listing doc. Add a localization to the group, and put Yearly at level 1. Upload
+   `store/ios-review/paywall.png` as each review screenshot.
+5. **Pricing and Availability**: set the app to **$0.00 (Free)**, and leave out the 27 EU countries.
 
 ## 2. RevenueCat (the Mentto project)
 
@@ -37,13 +36,15 @@ account, team or certificates.** Simulator builds disable code signing, so no ce
 2. **In-App Purchase key**: the team-wide key already made for Odova works, with the same issuer id
    (see where it's stored in the Files folder), or create a new one in App Store Connect, Users and
    Access, Integrations, In-App Purchase. Apple lets you download a key only once.
-3. **Products**: import the three App Store products.
+3. **Products**: add the three App Store products with **New product**. Import needs an App Store Connect
+   API key that this setup doesn't use, so they show "Could not check", which is fine.
 4. **Entitlements**: attach all three to `pro`.
 5. **Offerings, `default`**: add the App Store product to each existing package: `$rc_monthly` →
    `mentto_pro_monthly`, `$rc_annual` → `mentto_pro_yearly`, `$rc_lifetime` → `mentto_pro_lifetime`.
 6. Copy the public SDK key (`appl_...`) for section 4.
-7. Paste RevenueCat's App Store server notification URL into App Store Connect (App Information,
-   App Store Server Notifications, production and sandbox).
+7. Copy the **Apple Server Notification URL** from the app's **Apple Server to Server notification
+   settings** section in RevenueCat. Paste it into App Store Connect (App Information, App Store Server
+   Notifications, production and sandbox).
 
 ## 3. Google Cloud (project `mentto-511807`)
 

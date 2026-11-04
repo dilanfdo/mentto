@@ -13,7 +13,7 @@ ENV_FILE=.env.production.local
 export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
 if [[ ! -f $ENV_FILE ]]; then
-  echo "Missing $ENV_FILE. See docs/ios-release.md, section 5." >&2
+  echo "Missing $ENV_FILE. See docs/ios-release.md, section 4." >&2
   exit 1
 fi
 
