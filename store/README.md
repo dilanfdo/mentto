@@ -1,6 +1,6 @@
 # Store graphics
 
-Everything uploaded to the Google Play listing.
+Everything uploaded to the Google Play and App Store listings.
 
 ```
 store/
@@ -13,6 +13,11 @@ store/
   screenshots/tablet-10in/        1600×2560
   build_screenshots.py            renders the panels and the feature graphic from source/
   seed_demo.mjs                   builds the demo database the captures are taken with (USD or LKR)
+  source-ios/                     raw 1320×2868 iPhone 17 Pro Max simulator captures
+  screenshots/ios-6.9/            1320×2868  App Store, iPhone 6.9"
+  screenshots/ios-6.3/            1206×2622  App Store, iPhone 6.3"
+  ios-review/paywall.png          App Review screenshot for the in-app purchases
+  build_screenshots_ios.py        renders the App Store panels from source-ios/ (see docs/ios-app-store-listing.md)
   video/mentto-demo.mp4           72s demo walkthrough recorded on the emulator, in LKR
 ```
 

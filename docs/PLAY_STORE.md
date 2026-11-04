@@ -428,7 +428,7 @@ Try Pro free for 7 days, then monthly or yearly, or pay once for lifetime. Cance
 | Government app | No | |
 | Financial features | **My app doesn't provide any financial features** | It records fees; it doesn't move, lend or hold money |
 | Health | No health features | |
-| Account creation / deletion | "My app does not allow users to create an account" | Login with outside accounts: **Yes → Other**: "Tutors may optionally sign in with their Google account only to back up and restore their records to their own Google Drive. Mentto does not create or manage accounts." |
+| Account creation / deletion | "My app does not allow users to create an account" | Login with outside accounts: **No** (Google sign-in is only for the tutor's own Drive backup, not a login to Mentto) |
 | Data deletion URL | the privacy policy URL | Uninstall or clear storage removes local data; backups live in the user's own Drive |
 
 ### 9d. Data safety
