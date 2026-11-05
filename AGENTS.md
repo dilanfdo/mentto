@@ -51,6 +51,8 @@ attendance, payments, reminders). Android is live; iOS is prepared (see `docs/io
   students, payments and attendance is free. Never lock or delete existing data when Pro ends.
 - `modules/exact-alarms/` local Expo module: checks/opens Android's "Alarms & reminders" access, without
   which reminders can arrive up to an hour late.
+- `modules/restore-key/` local Expo module: Play's zero-tap sign-in restoration. The key only names the account for
+  a silent Google sign-in; there is no server to prove it to. Never change its relying party ID. See `docs/integrations.md`.
 
 ### Design system
 

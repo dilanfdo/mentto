@@ -4,16 +4,25 @@
 import { Platform } from 'react-native';
 import { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } from '@react-native-google-signin/google-signin';
 
+import { clearRestoreKey, saveRestoreKey, takeRestoredAccount } from '@modules/restore-key';
+
 import { GOOGLE_IOS_CLIENT_ID } from '@/lib/config';
 
 export const DRIVE_APPDATA_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 
 let configured = false;
-function configure() {
-  if (configured) return;
-  GoogleSignin.configure({ scopes: [DRIVE_APPDATA_SCOPE], iosClientId: GOOGLE_IOS_CLIENT_ID || undefined });
+function configure(accountName?: string) {
+  if (configured && !accountName) return;
+  GoogleSignin.configure({ scopes: [DRIVE_APPDATA_SCOPE], iosClientId: GOOGLE_IOS_CLIENT_ID || undefined, accountName });
   configured = true;
 }
+
+/** Never holds up sign-in: without a key the tutor just signs in by hand on the next phone. */
+function keepRestoreKey(email: string) {
+  saveRestoreKey(email).catch((e) => console.warn('Could not save the restore key', e));
+}
+
+export { takeRestoredAccount };
 
 export class SignInCancelled extends Error {}
 
@@ -30,6 +39,7 @@ export async function signIn(): Promise<string> {
       const added = await GoogleSignin.addScopes({ scopes: [DRIVE_APPDATA_SCOPE] });
       if (!added || !isSuccessResponse(added)) throw new SignInCancelled();
     }
+    keepRestoreKey(res.data.user.email);
     return res.data.user.email;
   } catch (e) {
     if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_CANCELLED) throw new SignInCancelled();
@@ -37,16 +47,29 @@ export async function signIn(): Promise<string> {
   }
 }
 
-/** Restores the previous sign-in without UI. Null if the tutor has to sign in again. */
-export async function restoreSignIn(): Promise<string | null> {
+/**
+ * Restores the previous sign-in without UI. Null if the tutor has to sign in again.
+ * `moved` is the account from a restore key: it stands in when the sign-in itself didn't move here.
+ */
+export async function restoreSignIn(moved?: string | null): Promise<string | null> {
   if (Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID) return null;
   configure();
-  if (!GoogleSignin.hasPreviousSignIn()) return null;
+  const previous = GoogleSignin.hasPreviousSignIn();
+  if (!previous && !moved) return null;
+  if (!previous && moved) configure(moved);
+  // Google ended the session, so a new phone shouldn't try it. Not on a move: the account may simply
+  // not be on this phone yet.
+  const signedOut = async () => {
+    if (!moved) await clearRestoreKey().catch(() => {});
+    return null;
+  };
   try {
     const res = await GoogleSignin.signInSilently();
-    return res.type === 'success' ? res.data.user.email : null;
+    if (res.type !== 'success') return signedOut();
+    keepRestoreKey(res.data.user.email);
+    return res.data.user.email;
   } catch (e) {
-    if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_REQUIRED) return null;
+    if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_REQUIRED) return signedOut();
     throw e;
   }
 }
@@ -56,6 +79,7 @@ export async function signOut(): Promise<void> {
   try {
     await GoogleSignin.signOut();
   } catch {}
+  await clearRestoreKey().catch(() => {});
 }
 
 // The native module allows one getTokens() at a time and rejects an overlapping call

@@ -59,6 +59,7 @@ third party.
 | `plugins/withAccentColor.js` | Android | Sets the theme accent, so date and time dialogs are indigo rather than teal |
 | `expo-build-properties` | Android | R8 minify and resource shrinking in release |
 | `modules/exact-alarms/` | Android | Local Kotlin module: checks and opens the "Alarms & reminders" setting. On iOS its functions report that nothing is needed |
+| `modules/restore-key/` | Android | Local Kotlin module: saves, reads and deletes the restore key that signs a tutor back in on a new phone. See [integrations](./integrations.md#restoring-sign-in-on-a-new-phone). On iOS its functions do nothing |
 | Google Sign-In plugin (from `app.config.js`) | iOS | Adds the reversed client ID as a URL scheme |
 | `expo-font`, `expo-notifications`, `expo-splash-screen`, `expo-sqlite`, `expo-sharing` | Both | Fonts, notification icon, splash and native setup |
 

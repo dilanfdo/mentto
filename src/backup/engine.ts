@@ -144,9 +144,13 @@ export async function startBackup(database: DB): Promise<void> {
     account: await getMeta('backup_account'),
     lastBackupAt: await getMeta('last_backup_at'),
   });
-  if (!enabled) return;
+  const moved = await account.takeRestoredAccount().catch(() => null);
+  if (!enabled) {
+    if (moved) await resumeOnNewPhone(moved);
+    return;
+  }
   try {
-    const email = await account.restoreSignIn();
+    const email = await account.restoreSignIn(moved);
     if (!email) {
       set({ phase: 'signedOut' });
       return;
@@ -157,6 +161,22 @@ export async function startBackup(database: DB): Promise<void> {
     console.warn('Could not restore Google sign-in', e);
   }
   await backupNow();
+}
+
+/**
+ * The tutor had backup on before moving to this phone, but their data didn't come along. Reconnects
+ * without asking. The forced run checks Drive first, so their backup is offered, never overwritten.
+ */
+async function resumeOnNewPhone(moved: string): Promise<void> {
+  try {
+    const email = await account.restoreSignIn(moved);
+    if (!email) return;
+    await setMeta({ backup_enabled: '1', backup_account: email });
+    set({ account: email, phase: 'idle', error: null });
+    await backupNow({ force: state.lastBackupAt === null });
+  } catch (e) {
+    console.warn('Could not reconnect backup on this phone', e);
+  }
 }
 
 /** Automatic backup is a Pro feature; restoring never is. Set by BackupSync from the entitlement. */

@@ -139,6 +139,28 @@ keep all clients in this one project, or the two platforms won't see each other'
 | iOS: "Google sign-in isn't available in this build" | Built without `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` |
 | `ASYNC_OP_IN_PROGRESS` | Overlapping `getTokens()` calls; `getAccessToken()` shares one request to prevent it |
 
+### Restoring sign-in on a new phone
+
+Google Play requires apps with sign-in, even optional sign-in, to restore it on a new phone from April 2027
+([zero-tap sign-in restoration](https://support.google.com/googleplay/android-developer/answer/17492799)). Play measures this
+by whether a restore key can be retrieved. `modules/restore-key/` handles it with Credential Manager, on Android 9 and up:
+
+| Moment | What happens |
+|---|---|
+| Sign-in, or a launch while signed in | Saves a key once per install, backed up to the cloud where possible, otherwise kept for a cable transfer |
+| First launch of an install | Reads the key. If the sign-in file didn't move too, it passes the account to a silent Google sign-in |
+| Backup on, but the data didn't move | Reconnects backup. Drive is checked first, so an existing backup is offered, never overwritten |
+| Backup turned off, or Google ended the session | Deletes the key |
+
+**There is no server, unlike Google's guide.** Its guide proves the key to a relying party server, but here the key grants
+nothing. It only names the account, held in the WebAuthn `user.id`, and the Drive token still comes from Google, for an account
+already on the phone. The key's signature is never checked, and no `assetlinks.json` is needed. The relying party ID is
+`nexusdigitallabs.dev`; don't change it, or keys already on phones can't be found. Addresses over 64 bytes get no key, so
+those tutors sign in by hand.
+
+The "saved" and "checked" markers are in `noBackupFilesDir`, so they don't move with the app. Tested with simulated moves on an
+emulator; a real cable or cloud transfer between two phones is still untested.
+
 ## Website
 
 Repo `NexusDigitalLabs/nexusdigitallabs.github.io`, served at `nexusdigitallabs.dev`.
