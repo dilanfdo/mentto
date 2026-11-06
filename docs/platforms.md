@@ -123,7 +123,8 @@ them on. Settings mentions the matching one. These are separate from Drive backu
 
 ## Android builds
 
-Needs Android Studio's JDK and the Android SDK.
+Needs Android Studio's JDK and the Android SDK. Set `ANDROID_HOME` to the SDK first: on this Mac it's
+`$HOME/Library/Android/sdk`, because `~/.zshrc` ends up pointing at an external drive that may not be connected.
 
 ```bash
 rm -rf android
